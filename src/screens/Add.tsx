@@ -84,7 +84,7 @@ export function Add({ locations }: { locations: Location[] }) {
 
       <div className="entry">
         <div className="fieldbox"><small>מספר סט (5 ספרות) או ברקוד</small>
-          <input ref={inputRef} value={q} onChange={e => onInput(e.target.value)} inputMode="numeric" placeholder="76388" aria-label="מספר סט או ברקוד" autoFocus
+          <input ref={inputRef} value={q} onChange={e => onInput(e.target.value)} inputMode="numeric" placeholder="הקלד או סרוק" aria-label="מספר סט או ברקוד" autoFocus
             onKeyDown={e => { if (e.key === 'Enter' && q.length >= 4) doLookup(q) }} /></div>
         <button type="button" className={'cam' + (scan ? ' on' : '')} onClick={() => setScan(s => !s)}>
           <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z" /><circle cx="12" cy="13" r="3.5" /></svg>{scan ? 'סגור' : 'סרוק'}
