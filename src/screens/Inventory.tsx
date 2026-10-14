@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CONDITION, Condition, deleteItem, fmtPrice, InventoryRow, Location, Status, STATUS, updateItem, WALL_NAME } from '../lib/api'
+import { CONDITION, Condition, deleteItem, fmtPrice, InventoryRow, Location, Status, STATUS, updateItem, Zone } from '../lib/api'
 import { Empty, Loc, Pic, ThemeTag, toast, useMedia } from '../components/Bits'
 
 type Filters = { q: string; status: 'all' | Status; prod: 'all' | 'retired' | 'active'; stock: 'all' | 'in' | 'zero' | 'many'; themes: string[]; walls: string[]; tags: string[]; quick: 'all' | 'retired' | 'zero' | 'noprice' | 'week' }
@@ -15,7 +15,7 @@ function passes(p: InventoryRow, F: Filters) {
   if (F.stock === 'zero' && p.qty > 0) return false
   if (F.stock === 'many' && p.qty < 5) return false
   if (F.themes.length && !F.themes.includes(p.theme || '')) return false
-  if (F.walls.length && !F.walls.includes((p.location || '?')[0])) return false
+  if (F.walls.length && !F.walls.includes(p.wall || '?')) return false
   if (F.tags.length && !F.tags.some(t => p.tags?.includes(t))) return false
   if (F.quick === 'retired' && !p.retired) return false
   if (F.quick === 'zero' && p.qty > 0) return false
@@ -24,7 +24,7 @@ function passes(p: InventoryRow, F: Filters) {
   return true
 }
 
-export function Inventory({ rows, locations, reload }: { rows: InventoryRow[]; locations: Location[]; reload: () => void }) {
+export function Inventory({ rows, locations, zones, reload }: { rows: InventoryRow[]; locations: Location[]; zones: Zone[]; reload: () => void }) {
   const desktop = useMedia('(min-width: 900px)')
   const [F, setF] = useState<Filters>(F0)
   const [sheet, setSheet] = useState(false)
@@ -34,7 +34,9 @@ export function Inventory({ rows, locations, reload }: { rows: InventoryRow[]; l
 
   const themes = useMemo(() => { const m: Record<string, number> = {}; rows.forEach(r => { if (r.theme) m[r.theme] = (m[r.theme] || 0) + 1 }); return Object.keys(m).sort().map(k => ({ k, c: m[k] })) }, [rows])
   const tags = useMemo(() => { const m: Record<string, number> = {}; rows.forEach(r => r.tags?.forEach(t => { m[t] = (m[t] || 0) + 1 })); return Object.keys(m).sort().map(k => ({ k, c: m[k] })) }, [rows])
-  const walls = useMemo(() => Array.from(new Set(locations.map(l => l.wall))), [locations])
+  const walls = useMemo(() => zones.map(z => z.code), [zones])
+  const zoneName = (w: string) => zones.find(z => z.code === w)?.name || w
+  void locations
   const list = useMemo(() => {
     const l = rows.filter(r => passes(r, F))
     l.sort((a, b) => { let x: unknown = a[sortK], y: unknown = b[sortK]; if (typeof x === 'boolean') { x = x ? 1 : 0; y = y ? 1 : 0 } if (x == null) x = ''; if (y == null) y = ''; if (typeof x === 'string') { x = x.toLowerCase(); y = String(y).toLowerCase() } return ((x as number) > (y as number) ? 1 : (x as number) < (y as number) ? -1 : 0) * sortD })
@@ -50,7 +52,7 @@ export function Inventory({ rows, locations, reload }: { rows: InventoryRow[]; l
   const filterPane = (
     <>
       <div className="g"><div className="lab">נושא</div><div className="chips">{themes.map(t => <button type="button" key={t.k} className={'chip' + (F.themes.includes(t.k) ? ' on' : '')} onClick={() => toggle('themes', t.k)}>{t.k}<span className="cnt">{t.c}</span></button>)}</div></div>
-      <div className="g"><div className="lab">קיר</div><div className="chips">{walls.map(w => <button type="button" key={w} className={'chip' + (F.walls.includes(w) ? ' on' : '')} onClick={() => toggle('walls', w)}><Loc code={w} small />{WALL_NAME[w] || w}</button>)}</div></div>
+      <div className="g"><div className="lab">קיר</div><div className="chips">{walls.map(w => <button type="button" key={w} className={'chip' + (F.walls.includes(w) ? ' on' : '')} onClick={() => toggle('walls', w)}><Loc code={w} small />{zoneName(w)}</button>)}</div></div>
       <div className="g"><div className="lab">סטטוס</div><div className="chips"><button type="button" className={'chip' + (F.status === 'all' ? ' on' : '')} onClick={() => setF({ ...F, status: 'all' })}>הכל</button>{(Object.keys(STATUS) as Status[]).map(s => <button type="button" key={s} className={'chip' + (F.status === s ? ' on' : '')} onClick={() => setF({ ...F, status: s })}>{STATUS[s].he}</button>)}</div></div>
       <div className="g"><div className="lab">מצב ייצור</div><div className="chips">{([['all', 'הכל'], ['retired', 'פרש'], ['active', 'בייצור']] as const).map(([v, h]) => <button type="button" key={v} className={'chip' + (F.prod === v ? ' on' : '')} onClick={() => setF({ ...F, prod: v })}>{h}</button>)}</div></div>
       <div className="g"><div className="lab">כמות</div><div className="chips">{([['all', 'הכל'], ['in', 'יש'], ['zero', 'אזל'], ['many', '5 ומעלה']] as const).map(([v, h]) => <button type="button" key={v} className={'chip' + (F.stock === v ? ' on' : '')} onClick={() => setF({ ...F, stock: v })}>{h}</button>)}</div></div>

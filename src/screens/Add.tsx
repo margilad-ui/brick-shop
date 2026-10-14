@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { addItem, CatalogSet, Condition, CONDITION, fmtPrice, Kind, Location, lookup, Lookup, NewItem, queueAdd, shelfCount, Status, STATUS, WALL_NAME } from '../lib/api'
+import { addItem, CatalogSet, Condition, CONDITION, fmtPrice, Kind, Location, lookup, Lookup, NewItem, queueAdd, shelfCount, Status, STATUS, zoneOf } from '../lib/api'
 import { Empty, Loc, Pic, ThemeTag, toast } from '../components/Bits'
 import { Scanner } from '../components/Scanner'
 
@@ -71,12 +71,14 @@ export function Add({ locations }: { locations: Location[] }) {
   const set = found ? found.set : null
   const retired = !!(set?.exit_date && set.exit_date < new Date().toISOString().slice(0, 10))
 
+  const zone = zoneOf(loc)
+  const here = locations.find(l => l.code === loc)
   return (
     <div className="page">
-      <div className={'shelf ' + loc[0]}>
-        <div className="where"><Loc code={loc} /><div>{WALL_NAME[loc[0]] || loc[0]} · מדף {loc.slice(1)}<small>{count == null ? '...' : `${count} פריטים כבר במדף`}</small></div></div>
+      <div className={'shelf ' + (zone?.color || 'blue')}>
+        <div className="where"><Loc code={loc} /><div>{here?.label || loc}<small>{count == null ? '...' : `${count} פריטים כבר כאן`}{zone?.site ? ` · ${zone.site}` : ''}</small></div></div>
         <select value={loc} onChange={e => setLoc(e.target.value)} aria-label="בחר מדף">
-          {locations.map(l => <option key={l.code} value={l.code}>{l.code} · {l.label}</option>)}
+          {locations.filter(l => l.active !== false || l.code === loc).map(l => <option key={l.code} value={l.code}>{l.code} · {l.label}</option>)}
         </select>
       </div>
 

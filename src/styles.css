@@ -60,7 +60,7 @@ img{max-width:100%}
 .cta.dark{background:var(--ink);color:#fff}
 
 /* layout */
-.shell{min-height:100%;display:grid;grid-template-rows:auto 1fr auto}
+.shell{min-height:100vh;min-height:100dvh;display:grid;grid-template-rows:auto 1fr auto}
 .bar{display:flex;align-items:center;justify-content:space-between;padding:calc(10px + var(--sat)) 18px 10px;background:var(--yellow);position:sticky;top:0;z-index:5}
 .bar .logo{font-size:16px}
 .bar .me{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);font-weight:500}
@@ -75,11 +75,12 @@ img{max-width:100%}
 @media (min-width:900px){
   .shell{grid-template-columns:200px 1fr;grid-template-rows:1fr}
   .bar{display:none}
-  .tabs{position:static;grid-template-columns:1fr;align-content:start;gap:4px;background:var(--ink);color:#fff;padding:18px 14px;border:0;grid-row:1}
+  .tabs{position:sticky;top:0;height:100vh;height:100dvh;overflow:auto;grid-template-columns:1fr;align-content:start;gap:4px;background:var(--ink);color:#fff;padding:18px 14px;border:0;grid-row:1}
   .tabs button{display:flex;align-items:center;gap:10px;font-size:14px;color:#cfc9be;padding:9px 12px;border-radius:10px;text-align:right}
   .tabs button.on{background:var(--yellow);color:var(--ink)}
   .tabs .stud{width:18px;height:18px;font-size:18px}
-  .tabs .sidelogo{display:flex!important;color:#fff;font-size:17px;margin:4px 6px 18px}
+  .tabs .sidelogo{display:flex!important;font-size:17px;margin:4px 6px 18px}
+  .tabs .sidelogo .logo{color:#fff}
   .tabs .sideme{display:flex!important;margin-top:auto;align-items:center;gap:10px;color:#cfc9be;font-size:13px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12)}
   .tabs .sideme img{width:34px;height:34px;border-radius:50%;object-fit:cover;object-position:top;background:var(--oak-soft)}
   .page{padding:22px 26px 40px;gap:16px}
@@ -112,7 +113,7 @@ img{max-width:100%}
 
 /* add screen */
 .shelf{display:flex;align-items:center;justify-content:space-between;background:var(--blue-soft);border-radius:14px;padding:10px 14px;gap:10px}
-.shelf.A{background:var(--red-soft)}.shelf.C{background:var(--green-soft)}.shelf.D{background:var(--yellow-soft)}.shelf.P{background:var(--cocoa-soft)}
+.shelf.red{background:var(--red-soft)}.shelf.green{background:var(--green-soft)}.shelf.yellow{background:var(--yellow-soft)}.shelf.cocoa{background:var(--cocoa-soft)}.shelf.oak{background:var(--oak-soft)}.shelf.ink,.shelf.stone{background:var(--ink-soft)}
 .shelf .where{display:flex;align-items:center;gap:10px}
 .shelf .loc{font-size:20px;padding:4px 10px}
 .shelf small{display:block;color:var(--ink-2);font-size:12px}
@@ -221,3 +222,21 @@ select.sel{font-size:13px;border:1px solid var(--line-2);border-radius:999px;pad
 .spec b{font-weight:500;font-family:var(--display);font-size:12px;direction:ltr}
 .dacts{display:flex;gap:8px;flex-wrap:wrap}
 .dacts .btn{flex:1}
+
+/* settings */
+.zone{border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px;background:var(--paper)}
+.zone .zh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.zone .zh input{border:1px solid var(--line-2);border-radius:10px;padding:7px 10px;font-size:14px;background:var(--paper)}
+.zone .zh input.nm{flex:1;min-width:140px;font-weight:500}
+.zone .zh input.st{width:140px}
+.swatches{display:flex;gap:6px}
+.swatches button{width:24px;height:24px;border-radius:7px;border:2px solid transparent;padding:0}
+.swatches button.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--paper) inset}
+.shelves{display:flex;flex-wrap:wrap;gap:6px}
+.shelves .sh{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:999px;padding:3px 8px 3px 4px;font-size:12px;background:var(--bg)}
+.shelves .sh input{border:0;background:none;width:110px;font-size:12px;padding:0}
+.shelves .sh button{border:0;background:none;color:var(--stone);padding:0 2px;font-size:14px;line-height:1}
+.shelves .sh.off{opacity:.45}
+.addrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.addrow input,.addrow select{border:1px solid var(--line-2);border-radius:10px;padding:7px 10px;font-size:13px;background:var(--paper)}
+.addrow input.code{width:70px;font-family:var(--display);font-weight:700;direction:ltr;text-align:center;text-transform:uppercase}

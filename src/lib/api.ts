@@ -12,7 +12,13 @@ export type Lookup =
   | { found: false; reason: 'barcode_unknown' | 'set_unknown'; q: string }
   | { error: string }
 
-export type Location = { code: string; wall: string; shelf: number | null; label: string | null; color: string | null; sort: number }
+export type Location = { code: string; wall: string; shelf: number | null; label: string | null; color: string | null; sort: number; kind: string; active: boolean }
+export type Zone = { code: string; name: string; color: string; site: string | null; sort: number }
+export const ZONE_COLORS: Record<string, string> = { red: 'var(--red)', blue: 'var(--blue)', green: 'var(--green)', yellow: 'var(--yellow)', cocoa: 'var(--cocoa)', oak: 'var(--oak)', ink: 'var(--ink)', stone: 'var(--stone)' }
+export const LOC_KINDS: Record<string, string> = { shelf: 'מדף', box: 'קופסה', cabinet: 'ארון', drawer: 'מגירה', bin: 'תא', other: 'אחר' }
+/* zone registry, filled after load so the Loc pill can colour itself */
+export const ZONES: Record<string, Zone> = {}
+export function zoneOf(code: string | null | undefined): Zone | undefined { if (!code) return; const z = Object.keys(ZONES).filter(k => code.startsWith(k)).sort((a, b) => b.length - a.length)[0]; return z ? ZONES[z] : undefined }
 export type Condition = 'sealed' | 'open' | 'built'
 export type Status = 'sale' | 'personal' | 'hold' | 'sold'
 export type Kind = 'set' | 'polybag' | 'gear' | 'parts' | 'other'
@@ -30,7 +36,6 @@ export const STATUS: Record<Status, { he: string; cls: string }> = {
 }
 export const CONDITION: Record<Condition, string> = { sealed: 'חדש סגור', open: 'פתוח', built: 'בנוי' }
 export const KIND: Record<Kind, string> = { set: 'סט', polybag: 'Polybag', gear: 'ציוד', parts: 'חלקים', other: 'אחר' }
-export const WALL_NAME: Record<string, string> = { A: 'קיר A', B: 'קיר B', C: 'קיר C', D: 'קיר D', P: 'Polybags' }
 const THEME_CLS: Record<string, string> = { 'Harry Potter': 't-red', 'Star Wars': 't-ink', Disney: 't-blue', Botanicals: 't-green', City: 't-yellow', 'The Lord of the Rings': 't-oak', Technic: 't-cocoa', Creator: 't-green', Ideas: 't-blue', Marvel: 't-red', Friends: 't-yellow', Icons: 't-oak', Ninjago: 't-green', Speed: 't-red', DOTS: 't-yellow', Architecture: 't-ink', Classic: 't-yellow', Duplo: 't-red' }
 export function themeCls(t: string | null) { return (t && THEME_CLS[t]) || 't-ink' }
 export function fmtPrice(x: number | null | undefined) { return x == null ? '' : '₪ ' + Math.round(x).toLocaleString('en-US') }
@@ -56,6 +61,16 @@ export async function loadLocations(): Promise<Location[]> {
   if (error) throw error
   return data as Location[]
 }
+export async function loadZones(): Promise<Zone[]> {
+  const { data, error } = await supabase.from('bs_zones').select('*').order('sort')
+  if (error) throw error
+  Object.keys(ZONES).forEach(k => delete ZONES[k]); (data as Zone[]).forEach(z => { ZONES[z.code] = z })
+  return data as Zone[]
+}
+export async function saveZone(z: Zone) { const { error } = await supabase.from('bs_zones').upsert(z, { onConflict: 'code' }); if (error) throw error }
+export async function deleteZone(code: string) { const { error } = await supabase.from('bs_zones').delete().eq('code', code); if (error) throw error }
+export async function saveLocation(l: Partial<Location> & { code: string; wall: string }) { const { error } = await supabase.from('bs_locations').upsert(l, { onConflict: 'code' }); if (error) throw error }
+export async function deleteLocation(code: string) { const { error } = await supabase.from('bs_locations').delete().eq('code', code); if (error) throw error }
 export async function loadInventory(): Promise<InventoryRow[]> {
   const { data, error } = await supabase.from('bs_inventory').select('*').order('updated_at', { ascending: false }).limit(5000)
   if (error) throw error

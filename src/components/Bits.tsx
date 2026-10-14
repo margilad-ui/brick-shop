@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { themeCls } from '../lib/api'
+import { themeCls, zoneOf, ZONE_COLORS } from '../lib/api'
 
 export function Logo({ short = false, className = '' }: { short?: boolean; className?: string }) {
   return <span className={'logo ' + className}>BR<span className="stack"><i /><i /><i /><i /></span>{short ? 'CK' : 'CK HOUSE'}</span>
@@ -8,8 +8,12 @@ export function Stud({ color = '' }: { color?: string }) {
   return <span className={'stud ' + color}><b /><b /><b /><b /></span>
 }
 export function Loc({ code, small = false }: { code: string | null; small?: boolean }) {
-  if (!code) return <span className="loc" style={small ? { minWidth: 30, fontSize: 10, padding: '1px 0' } : undefined}>—</span>
-  return <span className={'loc ' + code[0]} style={small ? { minWidth: 30, fontSize: 10, padding: '1px 0' } : undefined}>{code}</span>
+  const sz = small ? { minWidth: 30, fontSize: 10, padding: '1px 0' } : {}
+  if (!code) return <span className="loc" style={sz}>—</span>
+  const z = zoneOf(code)
+  const bg = z ? ZONE_COLORS[z.color] || 'var(--stone)' : undefined
+  const fg = z?.color === 'yellow' ? 'var(--ink)' : '#fff'
+  return <span className={'loc ' + (z ? '' : code[0])} style={{ ...sz, ...(bg ? { background: bg, color: fg } : {}) }}>{code}</span>
 }
 export function ThemeTag({ theme }: { theme: string | null }) {
   if (!theme) return null

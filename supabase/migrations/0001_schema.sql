@@ -180,3 +180,15 @@ insert into public.bs_settings(key, value) values
  ('usd_ils', '3.7'),
  ('vat_included', 'true')
 on conflict do nothing;
+
+-- 0002: zones (walls, rooms, cabinets) and location kinds
+create table if not exists public.bs_zones (
+  code text primary key, name text not null, color text not null default 'ink', site text, sort int default 0, created_at timestamptz not null default now()
+);
+alter table public.bs_zones enable row level security;
+create policy "zones all owners" on public.bs_zones for all to authenticated using (public.bs_is_owner()) with check (public.bs_is_owner());
+insert into public.bs_zones(code, name, color, site, sort) values
+ ('A','קיר A','red','חדר הלגו',10),('B','קיר B','blue','חדר הלגו',20),('C','קיר C','green','חדר הלגו',30),('D','קיר D','yellow','חדר הלגו',40),('P','Polybags','cocoa','חדר הלגו',50)
+on conflict do nothing;
+alter table public.bs_locations add column if not exists kind text not null default 'shelf';
+alter table public.bs_locations add column if not exists active boolean not null default true;
