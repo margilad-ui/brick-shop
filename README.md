@@ -1,6 +1,6 @@
 # BRICK Shop
 
-מערכת המלאי והחנות של BRICK HOUSE. אפיון מלא ב `docs/00_SPEC.md`.
+מערכת המלאי והחנות של BRICK HOUSE. מסמכי הפרויקט המלאים ב `docs/` (00 עד 06).
 
 - `src/` אפליקציית PWA (Vite + React + TypeScript), עברית RTL. מתארחת ב GitHub Pages.
 - `supabase/migrations/` סכמת בסיס הנתונים (טבלאות `bs_*`).
