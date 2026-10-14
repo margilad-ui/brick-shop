@@ -192,3 +192,17 @@ insert into public.bs_zones(code, name, color, site, sort) values
 on conflict do nothing;
 alter table public.bs_locations add column if not exists kind text not null default 'shelf';
 alter table public.bs_locations add column if not exists active boolean not null default true;
+
+-- ============================================================
+-- 15.10.2026 · BRICK Shop public layer (added via execute_sql)
+-- ============================================================
+-- settings used by the shop
+-- insert into bs_settings: shop_demo (true), shop_whatsapp ("972525000553"), shop_bit_phone ("0525000553")
+-- views (security_invoker = false, granted to anon): bs_shop (items for sale + catalog), bs_shop_demo (60 catalog samples, 3 per leading theme, computed price),
+--   bs_shop_catalog (public catalog columns for the product page)
+-- functions: bs_shop_config() -> jsonb (shop settings), bs_place_order(jsonb) -> {number, id} (security definer, validates and inserts into bs_orders)
+-- table bs_orders (number from bs_order_seq starting 1001; RLS: owners only). anon never reads it.
+-- assets pipeline: storage bucket bs-assets (public); table bs_asset_jobs; function bs_asset_import(url, path, type) queues a job and pings the
+--   edge function "assets" through pg_net. The function copies from cdn.openart.ai / raw.githubusercontent.com / images.brickset.com into the bucket,
+--   and with type = 'key' chroma-keys a green-screen image into a transparent PNG.
+-- The exact SQL lives in the session log (03_Build_Log.md) and can be regenerated from supabase/functions/assets/index.ts and src/shop/data.ts.

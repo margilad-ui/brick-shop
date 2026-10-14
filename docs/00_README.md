@@ -1,12 +1,12 @@
 # BRICK Shop · קובץ הפרויקט
 
-**עודכן:** 15 באוקטובר 2026
-**סטטוס:** אבן דרך 1 (ספירה) באוויר ועובדת. גלעד מתחיל להזין מלאי. אבן דרך 2 (ניהול) חלקית. אבני דרך 3 ו 4 (מחירים, חנות ללקוחות) טרם התחילו.
+**עודכן:** 15 באוקטובר 2026, 02:40
+**סטטוס:** אבן דרך 1 (ספירה) באוויר, גלעד סופר (15 שורות ב 15.10). אבן דרך 4 (BRICK Shop ללקוחות) באוויר בגרסה ראשונה לסקירה, עם ג'ואי בסרטונים. אבני דרך 2 ו 3 (ניהול להשלמה, מחירים) פתוחות.
 **בעלים:** גלעד. **בונה:** קלוד, מתוך הפרויקט "LEGO INVENTORY" ב claude.ai.
 
 ## מה זה, במשפט
 
-מערכת מלאי וחנות לאוסף הלגו של גלעד (מאות קופסאות חדשות, Polybags, ציוד). בסיס נתונים אחד, שני פנים: משרד אחורי לספירה וניהול (קיים, באוויר), ו BRICK Shop, חנות מעוצבת ללקוחות לפי המותג BRICK HOUSE (בהדמיה בלבד, עדיין לא נבנתה).
+מערכת מלאי וחנות לאוסף הלגו של גלעד (מאות קופסאות חדשות, Polybags, ציוד). בסיס נתונים אחד, שני פנים: משרד אחורי לספירה וניהול (קיים, באוויר), ו BRICK Shop, חנות מעוצבת ללקוחות לפי המותג BRICK HOUSE (באוויר מ 15.10 בגרסה ראשונה, בכתובת /shop, עם ג'ואי כמארח).
 
 הרעיון המרכזי: לא מקלידים נתונים. מספר סט (5 ספרות בחזית הקופסה) או ברקוד EAN (מאחור) מובילים לרשומה מלאה בקטלוג Brickset. הרישום הוא רק: מה, כמה, איפה.
 
@@ -25,12 +25,14 @@
 ## איפה הדברים
 
 - **האפליקציה (משרד אחורי):** https://margilad-ui.github.io/brick-shop/
+- **החנות ללקוחות (BRICK Shop):** https://margilad-ui.github.io/brick-shop/shop/ (אנגלית: כפתור EN בכותרת)
 - **הקוד:** https://github.com/margilad-ui/brick-shop (ציבורי, אין בו סודות)
 - **בסיס הנתונים:** Supabase, פרויקט `tripaloo` (ref `fzznhlitvigvsxhkhvwf`), טבלאות בקידומת `bs_`
 - **תיקיית הפרויקט במחשב של גלעד:** `C:\Users\margi\OneDrive\Desktop\Letsgo Serious Play\מלאי לגו`
   - `00_Project_Docs\` המסמכים האלה
   - `BRICK_SHOP_Mockups_v1.html`, `_v2.html`, `BRICK_SHOP_Admin_v3.html` ההדמיות (ספרי סקירה עם שדות הערות)
   - תמונות המדפים (WhatsApp Image 2026-10-14), לוחות המותג מ OpenArt (33.png, 55.png, gpt-image-2.5-sunburst-edit-*.png)
+  - `Joey\` נכסי ג'ואי: `cutouts\` 11 תנוחות חתוכות (webp שקוף), ו `Download_Joey_Assets.bat` שמוריד את התמונות ברזולוציה גבוהה ואת 4 הסרטונים (לחיצה כפולה)
 - **פרויקט האם:** BRICK HOUSE, `C:\Users\margi\Downloads\PROJECTS\BRICK HOUSE\00_Project_Docs\` (קונספט, מותג, קניין רוחני). החנות היא "BRICK Shop" ממשפחת המותג.
 - **הדמיות מקוונות (claude.ai, פרטיות):** v1 `https://claude.ai/artifact/VtWz6ekqHzvbFyN5CLunnp`, v2 `https://claude.ai/artifact/MvxgNgQWRW5mpeXf5B1GYp`, v3 ניהול `https://claude.ai/artifact/SwpRNyBFgRHrSw7faSqZwD`
 - **מסמכי הפרויקט ב claude.ai:** פרויקט "LEGO INVENTORY", docs תחת `claude/`
