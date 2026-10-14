@@ -3,7 +3,8 @@ import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser'
 import { BarcodeFormat, DecodeHintType } from '@zxing/library'
 
 type Caps = { zoom?: { min: number; max: number; step: number }; focusMode?: string[] }
-type Track = MediaStreamTrack & { getCapabilities?: () => Caps }
+type Track = MediaStreamTrack
+const capsOf = (t: Track): Caps => (typeof t.getCapabilities === 'function' ? (t.getCapabilities() as unknown as Caps) : {})
 type Detector = { detect(src: HTMLVideoElement): Promise<{ rawValue: string }[]> }
 declare global { interface Window { BarcodeDetector?: new (o: { formats: string[] }) => Detector } }
 
@@ -30,8 +31,8 @@ export function Scanner({ onCode, onError }: { onCode: (code: string) => void; o
 
   const refocus = useCallback(async () => {
     const t = streamRef.current?.getVideoTracks()[0] as Track | undefined
-    if (!t?.getCapabilities) return
-    const caps = t.getCapabilities()
+    if (!t) return
+    const caps = capsOf(t)
     try {
       if (caps.focusMode?.includes('single-shot')) { await t.applyConstraints({ advanced: [{ focusMode: 'single-shot' } as MediaTrackConstraintSet] }); await new Promise(r => setTimeout(r, 400)) }
       if (caps.focusMode?.includes('continuous')) await t.applyConstraints({ advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet] })
@@ -72,7 +73,7 @@ export function Scanner({ onCode, onError }: { onCode: (code: string) => void; o
 
         // 2. continuous focus and a little zoom help with small barcodes
         const track = stream.getVideoTracks()[0] as Track
-        const caps: Caps = track.getCapabilities?.() || {}
+        const caps: Caps = capsOf(track)
         try { if (caps.focusMode?.includes('continuous')) await track.applyConstraints({ advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet] }) } catch { /* ignore */ }
         if (caps.zoom && caps.zoom.max > caps.zoom.min) {
           const z = Math.min(caps.zoom.max, Math.max(caps.zoom.min, 1.5))
