@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { addItem, CatalogSet, Condition, CONDITION, fmtPrice, Kind, Location, lookup, Lookup, NewItem, queueAdd, shelfCount, Status, STATUS, zoneOf } from '../lib/api'
+import { addItem, CatalogSet, Condition, CONDITION, fmtPrice, Kind, Location, lookup, Lookup, NewItem, queueAdd, shelfCount, Status, STATUS, stockOf, zoneOf } from '../lib/api'
 import { Empty, Loc, Pic, ThemeTag, toast } from '../components/Bits'
 import { Scanner } from '../components/Scanner'
 
@@ -17,6 +17,7 @@ export function Add({ locations }: { locations: Location[] }) {
   const [status, setStatus] = useState<Status>('sale')
   const [price, setPrice] = useState<string>('')
   const [custom, setCustom] = useState({ name: '', kind: 'gear' as Kind })
+  const [have, setHave] = useState<{ location: string | null; qty: number; condition: Condition; status: Status }[]>([])
   const [recent, setRecent] = useState<Recent[]>(() => { try { return JSON.parse(localStorage.getItem('bs_recent') || '[]') } catch { return [] } })
   const inputRef = useRef<HTMLInputElement>(null)
   const timer = useRef<number | undefined>(undefined)
@@ -26,8 +27,8 @@ export function Add({ locations }: { locations: Location[] }) {
   const doLookup = useCallback(async (code: string) => {
     setBusy(true); setRes(null)
     const r = await lookup(code)
-    setRes(r); setBusy(false)
-    if ('found' in r && r.found) { setPrice(r.suggested.price != null ? String(r.suggested.price) : '') }
+    setRes(r); setBusy(false); setHave([])
+    if ('found' in r && r.found) { setPrice(r.suggested.price != null ? String(r.suggested.price) : ''); stockOf(r.set.set_num).then(setHave) }
     else setPrice('')
     setQty(1)
   }, [])
@@ -122,6 +123,13 @@ export function Add({ locations }: { locations: Location[] }) {
               <div className="tags"><ThemeTag theme={set.theme} />{retired ? <span className="tag t-red">פרש {set.exit_date?.slice(0, 4)}</span> : <span className="tag t-green">בייצור</span>}{set.rrp_us && <span className="tag t-ink">RRP ${set.rrp_us}</span>}</div>
             </div>
           </div>
+          {have.length > 0 && (
+            <div style={{ padding: '8px 14px', background: 'var(--yellow-soft)', fontSize: 13, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <b style={{ fontWeight: 500 }}>כבר במלאי: {have.reduce((s, h) => s + h.qty, 0)}</b>
+              {have.map((h, i) => <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Loc code={h.location} small />{h.qty}{h.condition !== 'sealed' ? ' · ' + CONDITION[h.condition] : ''}{h.status !== 'sale' ? ' · ' + STATUS[h.status].he : ''}</span>)}
+              <span className="muted">הוספה תגדיל את הכמות באותו מדף ומצב, או תפתח שורה חדשה</span>
+            </div>
+          )}
           <div className="price">
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}><span className="muted">₪</span><input value={price} onChange={e => setPrice(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" placeholder="לתמחר" aria-label="מחיר" /></div>

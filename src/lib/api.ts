@@ -76,6 +76,10 @@ export async function loadInventory(): Promise<InventoryRow[]> {
   if (error) throw error
   return data as InventoryRow[]
 }
+export async function stockOf(set_num: string): Promise<{ location: string | null; qty: number; condition: Condition; status: Status }[]> {
+  const { data } = await supabase.from('bs_items').select('location,qty,condition,status').eq('set_num', set_num).neq('status', 'sold').gt('qty', 0)
+  return (data || []) as { location: string | null; qty: number; condition: Condition; status: Status }[]
+}
 export async function shelfCount(code: string): Promise<number> {
   const { data, error } = await supabase.from('bs_items').select('qty').eq('location', code).neq('status', 'sold')
   if (error) return 0
