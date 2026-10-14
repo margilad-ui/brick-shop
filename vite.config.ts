@@ -8,8 +8,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon-192.png', 'icon-512.png', 'joey-head.webp'],
+      includeAssets: ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'joey-head.webp'],
       manifest: {
+        id: '/brick-shop/',
         name: 'BRICK Shop · מלאי',
         short_name: 'BRICK',
         description: 'ניהול מלאי BRICK Shop',
@@ -21,8 +22,9 @@ export default defineConfig({
         background_color: '#FAF8F4',
         theme_color: '#F5B81C',
         icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
       workbox: {
