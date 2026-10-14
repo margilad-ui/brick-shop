@@ -14,13 +14,22 @@ export function Scanner({ onCode, onError }: { onCode: (code: string) => void; o
     const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 150 })
     ;(async () => {
       try {
-        const devices = await BrowserMultiFormatReader.listVideoInputDevices()
-        const back = devices.find(d => /back|rear|environment|אחור/i.test(d.label)) || devices[devices.length - 1]
-        const constraints: MediaStreamConstraints = { video: back ? { deviceId: { exact: back.deviceId } } : { facingMode: 'environment' } }
-        setStatus('כוון את הברקוד למסגרת')
-        controls = await reader.decodeFromConstraints(constraints, videoRef.current!, (result) => {
+        const onResult = (result: { getText(): string } | undefined) => {
           if (result && !stopped) { stopped = true; controls?.stop(); onCode(result.getText()) }
-        })
+        }
+        setStatus('כוון את הברקוד למסגרת')
+        // back camera first: exact environment, then ideal, then any camera
+        const tries: MediaStreamConstraints[] = [
+          { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+          { video: { facingMode: { ideal: 'environment' } } },
+          { video: true },
+        ]
+        let lastErr: unknown = null
+        for (const c of tries) {
+          try { controls = await reader.decodeFromConstraints(c, videoRef.current!, onResult); lastErr = null; break }
+          catch (e) { lastErr = e }
+        }
+        if (lastErr) throw lastErr
       } catch (e) {
         const msg = (e as Error).message || 'אין גישה למצלמה'
         setStatus(msg); onError?.(msg)
