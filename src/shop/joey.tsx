@@ -65,7 +65,7 @@ export function Clip({ src, poster, className = '', loop = true, playing = true,
 
   useEffect(() => { const v = videoRef.current; if (!v) return; if (playing) v.play().catch(() => { }); else v.pause() }, [playing])
 
-  if (fallback) return poster ? <img src={poster} alt="" className={className} style={style} /> : null
+  if (fallback) return <span className={'clip fallback ' + className} style={style}>{poster && <img src={poster} alt="" className="clip-poster" />}</span>
   return <span className={'clip ' + className} style={style}>
     {!ready && poster && <img src={poster} alt="" className="clip-poster" />}
     <canvas ref={canvasRef} aria-hidden="true" style={{ opacity: ready ? 1 : 0 }} />

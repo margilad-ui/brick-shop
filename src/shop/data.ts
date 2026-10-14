@@ -32,6 +32,8 @@ export async function loadShop(force = false) {
   if (cache && !force && Date.now() - cache.at < 60_000) return cache
   if (inflight) return inflight
   inflight = (async () => {
+    const mock = (window as unknown as { __BS_MOCK?: { items: ShopItem[]; config: ShopConfig } }).__BS_MOCK
+    if (mock) { cache = { items: mock.items.map(d => ({ ...d, id: d.demo ? 'demo-' + d.set_num : d.id })), config: mock.config, at: Date.now() }; inflight = null; return cache }
     const [cfgRes, liveRes] = await Promise.all([
       supabase.rpc('bs_shop_config'),
       supabase.from('bs_shop').select('*').order('created_at', { ascending: false }).limit(1000),
@@ -65,6 +67,7 @@ export function useShop() {
 }
 
 export async function loadCatalogSet(set_num: string): Promise<CatalogSet | null> {
+  if ((window as unknown as { __BS_MOCK?: unknown }).__BS_MOCK) return null
   const { data } = await supabase.from('bs_shop_catalog').select('*').eq('set_num', set_num).maybeSingle()
   return (data as CatalogSet) || null
 }
