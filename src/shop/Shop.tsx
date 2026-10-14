@@ -17,7 +17,10 @@ export default function Shop() {
   const [intro, setIntro] = useState(() => { try { return sessionStorage.getItem('bs_intro') !== '1' && !location.search.includes('nointro') } catch { return false } })
   const endIntro = useCallback(() => { setIntro(false); try { sessionStorage.setItem('bs_intro', '1') } catch { /* ignore */ } }, [])
   useEffect(() => { applyDir(); document.body.classList.add('s-body'); return () => document.body.classList.remove('s-body') }, [])
-  useEffect(() => { if (path === '/') document.title = 'BRICK Shop · BRICK HOUSE' }, [path])
+  useEffect(() => {
+    const titles: Record<string, string> = { '/': 'BRICK Shop · BRICK HOUSE', '/sets': 'כל הערכות · BRICK Shop', '/collectors': 'לאספנים · BRICK Shop', '/checkout': 'הזמנה · BRICK Shop', '/about': 'BRICK HOUSE' }
+    if (titles[path]) document.title = titles[path]
+  }, [path])
 
   let page: React.ReactNode
   let p: Record<string, string> | null
