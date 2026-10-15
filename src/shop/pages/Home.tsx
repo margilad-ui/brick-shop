@@ -24,7 +24,7 @@ export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }
     retired: items.filter(i => i.retired).length, rare: items.filter(isRare).length, fresh: items.filter(isNew).length, poly: items.filter(i => i.kind === 'polybag').length,
   }
   const joeyLines = t('joey_lines').split('\n')
-  const shelf = useShelf(items, 8)
+  const shelf = useShelf(items, location.search.includes('lib') ? 8 : 0)
 
   const [world, setWorld] = useState<string | null>(null)
 

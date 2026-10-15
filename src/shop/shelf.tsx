@@ -13,7 +13,7 @@ export function useShelf(items: ShopItem[], max = 8) {
   const [faces, setFaces] = useState<BoxFaces[] | null>(null)
   useEffect(() => { let on = true; loadBoxes().then(b => { if (on) setFaces(b) }); return () => { on = false } }, [])
   return useMemo<ShelfBox[]>(() => {
-    if (!faces) return []
+    if (!faces || !max) return []
     const byNum = new Map(faces.map(f => [f.set_num, f]))
     const out: ShelfBox[] = []
     const seen = new Set<string>()
