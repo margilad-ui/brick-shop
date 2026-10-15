@@ -29,6 +29,24 @@
 - **מסמכים:** אותו מבנה כמו BRICK HOUSE (00 עד 06). לעדכן תאריך "עודכן" ולהוסיף לאחור ל 02 (החלטות) ו 03 (תקלות) תוך כדי עבודה, לא בסוף.
 - **זיכרון ומסמכי פרויקט ב claude.ai:** הפרויקט "LEGO INVENTORY" מחזיק את המסמכים תחת `claude/`. לעדכן אותם כשמשנים את הקבצים בתיקייה.
 
+## הפרומפטים לקופסאות (OpenArt, GPT Image 2.5, image2image מתמונת הפנים הרשמית)
+
+ממלאים את המידות (רוחב, גובה, עומק בס"מ מהקטלוג). זווית: 4:3. צד: 2:3. quality high, 2k, PNG. אפשר לצרף את תוצאת הזווית כרפרנס שני לצד, לעקביות.
+
+**זווית 45 מעלות:**
+
+```
+Photorealistic product render of the real physical LEGO retail box for the exact set shown in the attached image, reproduced faithfully: the same artwork, colors, logos, set name, set number and typography as on the real box, wrapped around the box like real LEGO packaging. All text must be spelled exactly as on the real box, sharp and legible, with no invented or garbled letters or digits. The box stands upright on its long bottom edge and is rotated 45 degrees, so the narrow spine faces the camera on the left and the full front face recedes to the right, both clearly visible, the box centered in the frame and filling most of its height. The spine shows the small product image, the set name, the set number and the piece count, on the same background color as the front. Box proportions: width [W] cm, height [H] cm, depth [D] cm, rendered true to these proportions. Camera at the box's mid height, 85mm lens. Soft, even, neutral studio lighting, crisp cardboard edges and corners, subtle shading on the box faces only. Isolated on a perfectly flat, uniform, solid pure chroma green background (#00FF00) with zero gradient, zero vignette, no floor, no shadow on the background, no reflections, nothing else in the frame, no added text, no watermark.
+```
+
+**צד (spine):**
+
+```
+Orthographic view of the spine only. Photorealistic product render of the real physical LEGO retail box for the exact set shown in the attached flat front artwork. Show ONLY its narrow side panel, the spine, exactly as it looks when the box stands upright on a shelf like a book: the camera is perpendicular to the spine, at the box's mid height, straight on, 85mm lens, so the spine is a flat vertical rectangle and the front face and back face are NOT visible at all, not even a sliver. The spine is a tall narrow rectangle with proportions [D] cm wide by [H] cm tall, centered in the frame and filling about 90 percent of the frame height, with empty green space on both sides. Keep the spine design exactly as a real LEGO box spine of this set: the same background color and artwork as the front, the small product image, the set name, the set number and the piece count, all text sharp and spelled exactly as on the real box, no invented or garbled letters or digits, same logos as on the front. Soft, even, neutral studio lighting, crisp cardboard edges, subtle shading on the spine only. Isolated on a perfectly flat, uniform, solid pure chroma green background (#00FF00) with zero gradient, zero vignette, no floor, no shadow on the background, no reflections, nothing else in the frame, no added text, no watermark.
+```
+
+**ג'ואי רץ (קליפ רחב):** Gemini Omni 1.1 Flash, image2video, 16:9, 1080p, 6 שניות, עם startFrame ו endFrame: פריימים ירוקים 1920×1080 שבהם ג'ואי (חיתוך `side.png` או `fetch.png`) בגובה 17% מהפריים, 40px מהקצה, 110px מהתחתית. הפריימים עולים ל GitHub (ענף `assets`, תיקיית `frames/`) ומיובאים ב `openart_upload_import`.
+
 ## קצב ומבנה של שיחה טובה איתו
 
 - פותחים במשפט מה עומד לקרות, ואז עושים. לא תוכניות ארוכות שמחכות לאישור, אלא אם הוא ביקש "רק רעיון, בלי בנייה".

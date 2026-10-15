@@ -1,6 +1,6 @@
 # BRICK Shop · מצב קיים
 
-**עודכן:** 15 באוקטובר 2026, 14:30. המספרים נכונים לרגע הכתיבה.
+**עודכן:** 15 באוקטובר 2026, 18:40. המספרים נכונים לרגע הכתיבה.
 
 ## באוויר
 
@@ -19,7 +19,8 @@
 | טבלאות (ניהול) | `bs_owners`, `bs_catalog`, `bs_zones`, `bs_locations`, `bs_items`, `bs_movements`, `bs_settings`, `bs_secrets`, view `bs_inventory`. RLS דרך `bs_is_owner()` |
 | שכבת החנות (ציבורית, קריאה בלבד) | views `bs_shop` (פריטים למכירה עם נתוני קטלוג), `bs_shop_demo` (60 ערכות דוגמה מהקטלוג, 3 לכל סדרה מובילה, מחיר מחושב), `bs_shop_catalog` (רשומת קטלוג לדף מוצר). פונקציות `bs_shop_config()` (הגדרות החנות), `bs_place_order(jsonb)` (שומרת הזמנה, מחזירה מספר). כולן זמינות ל anon |
 | הזמנות | `bs_orders`: מספר רץ מ 1001, שם, טלפון, יישוב, איסוף/משלוח, הערה, פריטים (jsonb), סכום, ביט/וואטסאפ, סטטוס (new, test), שפה. קריאה רק לבעלים |
-| נכסים | Storage bucket ציבורי `bs-assets`: `joey/keyed/{wave,run,wait,detective,present}.png` (שקופים), `joey/raw/*.png` (ירוקים), `joey/video/{run,run-lr,look,steal,jump,tumble,greet,peek,nap,sniff}.mp4` (ירוקים, 1080p), `brand/joey-ref-b.jpg`. טבלת `bs_asset_jobs` + פונקציית SQL `bs_asset_import(url, path, type)` + Edge Function `assets` (type: mime להעתקה, `key` לניקוי ירוק, `brickset` לתמונות נוספות) |
+| נכסים | Storage bucket ציבורי `bs-assets`: `joey/keyed/{wave,run,wait,detective,present}.png` (שקופים), `joey/raw/*.png` (ירוקים), `joey/video/{run,run-lr,look,steal,jump,tumble,greet,peek,nap,sniff}.mp4` (ירוקים, 1080p, הישנים), `joey/video/wide-{run2,run-lr,look,fetch,jump}.mp4` (הרחבים, בשימוש הרץ), `shelf/keyed/shelf-{a,b}.png` (מדף עץ מצויר, שקוף), `boxes/raw|keyed|web/<set_num>-{spine,angle}.png` (רנדרי קופסאות), `brand/joey-ref-b.jpg`. טבלת `bs_asset_jobs` + פונקציית SQL `bs_asset_import(url, path, type)` + Edge Function `assets` (גרסה 5; type: mime להעתקה, `key` לניקוי ירוק וחיתוך, `fit:<גובה>` להקטנת PNG, `brickset` לתמונות נוספות) |
+| קופסאות למדף | view `bs_shop_box_art` (set_num, spine_url, angle_url) נגזר מ bs_asset_jobs על `boxes/web/`. view `bs_shop_boxes` (front/back/prod מברייקסט לפי שם הקובץ: Box1/Box3 פנים שטוחות, Box5/Box6 גב, boxprod צילום מוצר). 8 ערכות עם רנדרים: 42238, 10344, 40699, 21319, 75280, 31203, 10278, 21322. ערכה עם רנדר נכנסת אוטומטית לדמו |
 | תמונות ערכות | `bs_catalog_images` (set_num, brickset_id, images jsonb): 75 ערכות, 1,032 תמונות רשמיות (Brickset getAdditionalImages). קריאה ציבורית. לערכה חדשה במלאי: `select bs_asset_import(set_num, brickset_id::text, 'brickset')` |
 | הגדרות החנות (bs_settings) | `shop_demo` (true), `shop_whatsapp` ("972525000553"), `shop_bit_phone` ("0525000553"), `usd_ils` (3.1), `retired_multiplier` (1.2), `vat_included` |
 | פונקציות Edge | `catalog` (verify_jwt): lookup, sync, usage. `assets` (verify_jwt=false, מעבדת רק עבודות מהטבלה): import, key |
@@ -31,8 +32,8 @@
 **משרד אחורי:** כניסה, הוספה (5 ספרות → כרטיס → הוסף), מיזוג שורות, רשימה וטבלה, מגירה, הגדרות. גילעד הזין 15 שורות.
 
 **החנות (נבדק בטלפון דרך הדפדפן המובנה של אפליקציית Claude, ובמחשב עם נתוני דמה):**
-- רגע פתיחה (פעם ב 12 שעות, `?intro` להפעלה, `?nointro` לדילוג): דלתות צהובות, לוגו שנבנה מלבנים, Come in. Build something., ג'ואי רץ בסרטון, הדלתות נפתחות. דף הבית: החדר הצהוב עם גשם לבנים עדין (לחיצה מוסיפה לבנה), מדף עץ עם 4 קופסאות אמיתיות, ג'ואי בסרטון קבלת פנים עם בועה מעליו, ארבעה חדרים (לבנים), "ג'ואי בחר", "לפי עולם" (הרקע מחליף צבע לפי סדרה), שלוש הבטחות, פוטר עץ מסודר עם ג'ואי מציץ מהארגז.
-- ג'ואי רץ לרוחב המסך (קטן, מהיר) כל 30 עד 55 שניות, קליפ אקראי מתוך 6: ריצה ימין לשמאל, ריצה שמאל לימין, עוצר ומביט למצלמה, בורח עם קופסה, קופץ באלכסון ותופס לבנה, מפיל מגדל לבנים.
+- רגע פתיחה (פעם ב 12 שעות, `?intro` להפעלה, `?nointro` לדילוג): דלתות צהובות, לוגו שנבנה מלבנים, ג'ואי רץ בסרטון, הדלתות נפתחות. דף הבית: החדר הצהוב עם לבנים 2x4 איזומטריות שצפות באזורים מתים, כותרת "הדלת פתוחה. / הלבנים מחכות." ממורכזת, מדף עץ מצויר עם 8 קופסאות אמיתיות על הצד (hover שולף ומסובב ל 45 מעלות, לחיצה לדף המוצר, בטלפון נגיעה), ג'ואי בסרטון קבלת פנים מתחת למדף עם בועה בגובה האף, ארבעה חדרים (לבנים), "ג'ואי בחר", "לפי עולם", שלוש הבטחות, פוטר קומפקטי עם ג'ואי מציץ מהארגז מעל שורת הזכויות.
+- ג'ואי רץ לרוחב המסך המלא (קטן, נכנס ויוצא בקצוות האמיתיים בכל מסך) כל 30 עד 55 שניות, קליפ אקראי מתוך 5 רחבים: ריצה ימין לשמאל, שמאל לימין, עוצר באמצע ומביט למצלמה (פריים 70%), בורח עם לבנה, קופץ ותופס לבנה. הפריים מחליק 16vw בכניסה וביציאה כדי שג'ואי יהיה מחוץ למסך בהתחלה ובסוף.
 - כל הערכות: סינון (הכל, פרשו, חדש, עד 150, מעל 1,000 חלקים, Polybags), סדרה, מיון, חיפוש, טעינה ב 24. כרטיס ערכה עם סטאדים בצבע הסדרה, תגיות, מחיר, כפתור לבנה.
 - לאספנים: "הכספת" הכהה עם ג'ואי הבלש (סרטון רחרוח לבנה זהב, כובע בלש), ערכה מובילה ונתונים (שנים מחוץ לייצור, מחיר מחירון, דירוג).
 - דף מוצר: גלריה (תמונת הקופסה + כל התמונות הרשמיות של Brickset, תמונות קטנות, לייטבוקס עם חצים), ארבעה אריחי נתונים (חלקים, מיניפיגורות, גיל, שנה), תיבת רכישה דביקה עם ג'ואי מציג, "ג'ואי על הערכה" בעברית, התיאור הרשמי כפסקאות עם "קראו עוד", פרטי הערכה, "עוד מהעולם הזה". קישור עמוק עובד.
@@ -44,6 +45,8 @@
 
 - **מחשב על האתר החי:** נבדק רק עם נתוני דמה ותמונות מקום (Playwright). הסרטונים בדסקטופ (greet בהירו, peek בפוטר) נבדקו בנייד בלבד.
 - **Safari / iPhone:** הניקוי ב WebGL אמור לעבוד, לא נבדק. אם הווידאו לא מתנגן, יש נפילה לתמונה.
+- **רנדרי הקופסאות** הם PNG עם שקיפות, כ 450KB ממוצע (17 קבצים, 7.6MB). הצדדים נטענים מיד, הזוויות אחרי 2.5 שניות. אם זה כבד: WebP דרך deno canvas בפונקציה, או להקטין עוד.
+- **Astro Bot (40899)** של גילעד: הרנדרים שלו נוצרו מחוץ לפרויקט BRICK HOUSE ב OpenArt. ממתין שיניח אותם ב `Joey\boxes\`.
 - **ביצועים:** 10 סרטונים (2.8 עד 5.2MB כל אחד) ב Storage, נטענים לפי הצורך (ראנר טוען אחד בכל פעם). בנייד איטי זה מורגש. אפשרות: גרסאות 720p קטנות.
 - **מחירים:** מחירי המלאי הם מה שגילעד הזין. מחירי הדמו: מחירון דולר × 3.1 (× 1.2 לפרשו), מעוגל לעשרות. לא KSP. זה אבן דרך 3.
 - **תמונות:** נטענות חי מ images.brickset.com. אין לנו עותק.
@@ -57,7 +60,8 @@
 - **סקירה מקומית של החנות במחשב (בלי רשת):** `npx vite preview --port 4173` ואז הסקריפט `review.mjs` עם Playwright (נתוני דמה דרך `window.__BS_MOCK`, תמונות מקום לכתובות Brickset, סרטונים מנותקים). הסקריפט נשמר ב scratchpad של הסשן, לא בריפו. לבנות מחדש אם צריך: הוא כ 40 שורות.
 - **סקירה חיה בנייד:** הדפדפן המובנה של אפליקציית Claude (`Claude_Browser`), preset mobile. Claude in Chrome רק כשכרום של גילעד פתוח.
 - **לכבות את הדמו:** `update bs_settings set value='false' where key='shop_demo'`.
-- **להעלות נכס מ OpenArt:** `select bs_asset_import('<cdn url>', 'joey/video/x.mp4', 'video/mp4')`. לנקות ירוק: `bs_asset_import('<storage url>', 'joey/keyed/x.png', 'key')`. סטטוס: `select * from bs_asset_jobs order by id desc`.
+- **להעלות נכס מ OpenArt:** `select bs_asset_import('<cdn url>', 'joey/video/x.mp4', 'video/mp4')`. לנקות ירוק: `bs_asset_import('<storage url>', 'joey/keyed/x.png', 'key')`. עותק ווב: `bs_asset_import('<keyed url>', 'boxes/web/x.png', 'fit:640')`. סטטוס: `select * from bs_asset_jobs order by id desc`. אם עבודה נתקעת ב running: `update bs_asset_jobs set status='pending' where id=...` ופינג.
+- **קופסה חדשה למדף (ערכה עם Box1/Box3 בברייקסט):** 1) `openart_upload_import` עם כתובת תמונת הפנים מ images.brickset.com. 2) שני פרומפטים (ב 06) ב `gpt-image-2-5-sunburst` image2image, 4:3 לזווית ו 2:3 לצד, high, 2k, png. 3) `bs_asset_import(cdn, 'boxes/raw/<set>-angle.png', 'image/png')` וכן spine. 4) key ל `boxes/keyed/`. 5) fit:560 (זווית) ו fit:640 (צד) ל `boxes/web/`. הערכה נכנסת למדף לבד (view). ללא תמונת פנים בברייקסט: צילום ישר של הקופסה של גילעד.
 - **לשנות סכמה:** `execute_sql` על fzznhlitvigvsxhkhvwf, רק הוספות. לעדכן `supabase/migrations/0001_schema.sql` לתיעוד (שכבת החנות עדיין לא מתועדת שם, ראו 03).
 - **הזמנות:** `select * from bs_orders order by number desc`.
 - **קבצים לגילעד:** `device_commit_files` לתיקייה `C:\Users\margi\OneDrive\Desktop\Letsgo Serious Play\מלאי לגו`. מסמכים: `00_Project_Docs`. ג'ואי: `Joey`.
