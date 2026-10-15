@@ -93,16 +93,16 @@ export async function loadImages(set_num: string): Promise<SetImage[]> {
   const { data } = await supabase.from('bs_catalog_images').select('images').eq('set_num', set_num).maybeSingle()
   return ((data?.images as SetImage[]) || [])
 }
-/* official box faces (flat front, flat back, product shot) from the Brickset additional images, via the bs_shop_boxes view */
-export type BoxFaces = { set_num: string; front: string | null; back: string | null; prod: string | null }
-let boxCache: BoxFaces[] | null = null
-export async function loadBoxes(): Promise<BoxFaces[]> {
-  const mock = (window as unknown as { __BS_MOCK?: { boxes?: BoxFaces[] } }).__BS_MOCK
-  if (mock) return mock.boxes || []
-  if (boxCache) return boxCache
-  const { data } = await supabase.from('bs_shop_boxes').select('*').or('front.not.is.null,back.not.is.null')
-  boxCache = (data as BoxFaces[]) || []
-  return boxCache
+/* box renders (spine and 45 degree views, transparent PNGs) made from the official front art, via the bs_shop_box_art view */
+export type BoxArt = { set_num: string; spine_url: string | null; angle_url: string | null }
+let artCache: BoxArt[] | null = null
+export async function loadBoxArt(): Promise<BoxArt[]> {
+  const mock = (window as unknown as { __BS_MOCK?: { boxart?: BoxArt[] } }).__BS_MOCK
+  if (mock) return mock.boxart || []
+  if (artCache) return artCache
+  const { data } = await supabase.from('bs_shop_box_art').select('*')
+  artCache = (data as BoxArt[]) || []
+  return artCache
 }
 /* turn Brickset's HTML description into readable paragraphs */
 export function paragraphs(html: string | null | undefined): string[] {

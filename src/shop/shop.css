@@ -131,33 +131,27 @@ img{max-width:100%;display:block}
 .s-hero-stage:has(.lib){height:clamp(420px,46vw,620px)}
 .s-shelf{position:absolute;top:0;inset-inline-start:0;width:62%;display:grid;gap:0}
 .s-shelf.lib{width:100%}
+.s-shelf.lib .s-shelf-plank,.s-shelf.lib .s-shelf-bracket{display:none}
 .s-shelf-boxes{display:flex;align-items:flex-end;justify-content:center;gap:clamp(8px,1.4vw,18px);padding:0 6% 8px}
 .s-shelf-box{display:block;width:clamp(72px,9vw,130px);aspect-ratio:1;background:var(--paper);border-radius:12px;padding:7%;box-shadow:0 10px 24px rgba(60,40,20,.18);transform:rotate(var(--rot,0deg)) translateY(var(--ty,0));transition:transform .25s var(--ease),box-shadow .25s}
 .s-shelf-box img{width:100%;height:100%;object-fit:contain}
 .s-shelf-box:hover{transform:rotate(0) translateY(-10px);box-shadow:var(--shadow-2);z-index:2}
 .s-shelf-box.b0{--rot:-4deg;--ty:2px}.s-shelf-box.b1{--rot:2deg;width:clamp(86px,11vw,150px)}.s-shelf-box.b2{--rot:-2deg;--ty:3px}.s-shelf-box.b3{--rot:4deg;width:clamp(64px,8vw,110px)}
 
-/* ---- the box library: real boxes standing like books, in CSS 3D ---- */
-.s-lib{position:relative;padding:0 3% 0;perspective:1500px;perspective-origin:50% 20%;--u:5px}
-.s-lib-row{display:flex;align-items:flex-end;justify-content:center;gap:3px;transform-style:preserve-3d;padding-top:16px}
-.s-book{position:relative;display:block;width:var(--w);height:var(--h);transform-style:preserve-3d;transform-origin:50% 100%;transition:transform .6s cubic-bezier(.2,.85,.25,1);color:#fff;text-decoration:none;animation:bs-shelve .7s cubic-bezier(.2,.85,.25,1) backwards;animation-delay:calc(var(--i) * 80ms)}
-.s-book:hover,.s-book.open{transform:translateZ(calc(var(--d) * .5)) rotateY(-36deg);z-index:3}
-.s-book>span{position:absolute;display:block}
-.s-book-spine{inset:0;overflow:hidden;border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;padding:7px 3px 6px;transform:translateZ(0);box-shadow:inset 1px 0 0 rgba(255,255,255,.18),inset -1px 0 0 rgba(0,0,0,.25)}
-.s-book-spine::before{content:"";position:absolute;inset:-12px;background-image:var(--face);background-size:cover;background-position:50% 50%;filter:blur(1.5px) saturate(1.2) brightness(.92);z-index:0}
-.s-book-spine::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.45),rgba(0,0,0,.12) 26%,rgba(255,255,255,.1) 48%,rgba(0,0,0,.08) 70%,rgba(0,0,0,.42)),linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,0) 30%,rgba(0,0,0,0) 70%,rgba(0,0,0,.3));z-index:0}
-.s-book-spine>*{position:relative;z-index:1}
-.s-book-thumb{width:82%;aspect-ratio:1;background:#fff;border-radius:4px;padding:6%;flex:none;box-shadow:0 1px 2px rgba(0,0,0,.3)}
-.s-book-thumb img{width:100%;height:100%;object-fit:contain}
-.s-book-name{flex:1;min-height:0;writing-mode:vertical-rl;font-family:var(--display);font-weight:800;font-size:11px;letter-spacing:.02em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:clip;text-shadow:0 1px 2px rgba(0,0,0,.5);direction:ltr}
-.s-book.thin .s-book-name{font-size:9.5px}
-.s-book-num{font-family:var(--display);font-weight:900;font-size:9px;letter-spacing:.04em;opacity:.95;text-shadow:0 1px 2px rgba(0,0,0,.5);writing-mode:vertical-rl}
-.s-book-pcs{font-family:var(--display);font-weight:800;font-size:8px;background:var(--yellow);color:var(--ink);border-radius:3px;padding:2px 3px;white-space:nowrap}
-.s-book-face{top:0;left:100%;width:var(--d);height:100%;transform-origin:0 50%;transform:rotateY(90deg);background-image:var(--face);background-size:100% 100%;background-color:#fff;border-radius:0 2px 2px 0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);filter:brightness(.96)}
-.s-book-top{top:0;left:0;width:100%;height:var(--d);transform-origin:50% 0;transform:rotateX(-90deg);background:linear-gradient(90deg,rgba(0,0,0,.08),rgba(255,255,255,.1)),var(--face) 50% 0/100% auto #dcd6cc;filter:brightness(1.05)}
-.s-book-shadow{left:-14%;right:-14%;bottom:-10px;height:14px;transform:translateZ(-2px) scaleX(1);background:radial-gradient(ellipse at 50% 50%,rgba(60,40,20,.42),rgba(60,40,20,0) 70%);transition:transform .6s,opacity .6s;pointer-events:none}
-.s-book:hover .s-book-shadow,.s-book.open .s-book-shadow{transform:translateZ(-2px) scaleX(2.4) translateX(14%);opacity:.9}
-@keyframes bs-shelve{from{opacity:0;transform:translateY(-30px) translateZ(60px) rotateY(-30deg)}to{opacity:1;transform:none}}
+/* ---- the box shelf: real box renders standing like books on the painted shelf ---- */
+.s-shelf2{position:relative;--u:4.2px;--lip:7%}
+.s-shelf2-wood{display:block;width:100%;height:auto;pointer-events:none;filter:drop-shadow(0 18px 18px rgba(60,40,20,.22))}
+.s-shelf2-row{position:absolute;left:5%;right:5%;bottom:calc(100% - var(--lip));display:flex;align-items:flex-end;justify-content:center;gap:2px;z-index:2}
+.s-bx{position:relative;display:block;height:var(--h);flex:none;transition:transform .45s cubic-bezier(.2,.85,.25,1),z-index 0s;transform-origin:50% 100%;animation:bs-shelve .6s cubic-bezier(.2,.85,.25,1) backwards;animation-delay:calc(var(--i) * 70ms)}
+.s-bx img{display:block;height:100%;width:auto;user-select:none;-webkit-user-drag:none}
+.s-bx-spine{transition:opacity .25s}
+.s-bx-angle{position:absolute;bottom:0;left:50%;transform:translateX(-50%) scale(.9);opacity:0;transition:opacity .3s,transform .45s cubic-bezier(.2,.85,.25,1);max-width:none;pointer-events:none;filter:drop-shadow(0 16px 14px rgba(60,40,20,.35))}
+.s-bx-shadow{position:absolute;left:-10%;right:-10%;bottom:-6px;height:10px;border-radius:50%;background:rgba(60,40,20,.35);filter:blur(5px);transition:opacity .3s,transform .45s;z-index:-1}
+.s-bx:hover,.s-bx.open{z-index:5;transform:translateY(-10px)}
+.s-bx:hover .s-bx-spine,.s-bx.open .s-bx-spine{opacity:0}
+.s-bx:hover .s-bx-angle,.s-bx.open .s-bx-angle{opacity:1;transform:translateX(-50%) scale(1.06)}
+.s-bx:hover .s-bx-shadow,.s-bx.open .s-bx-shadow{transform:scaleX(2.6) translateY(10px);opacity:.8}
+@keyframes bs-shelve{from{opacity:0;transform:translateY(-26px)}to{opacity:1;transform:none}}
 .s-shelf-bracket{position:absolute;top:100%;width:12px;height:34px;background:var(--cocoa);border-radius:0 0 4px 4px;opacity:.9}
 .s-shelf-bracket.a{inset-inline-start:12%}.s-shelf-bracket.b{inset-inline-end:12%}
 .s-shelf-plank{position:relative;height:16px;border-radius:4px;background:var(--oak);background-image:repeating-linear-gradient(90deg, rgba(0,0,0,.08) 0 2px, transparent 2px 90px), linear-gradient(180deg, rgba(255,255,255,.25), transparent 40%, rgba(0,0,0,.18));box-shadow:0 12px 20px rgba(60,40,20,.25)}
@@ -487,8 +481,7 @@ img{max-width:100%;display:block}
   .s-brick3d{transform:scale(.6)}
   .s-brick3d.f1,.s-brick3d.f6{display:none}
   .s-shelf-box.b3{display:none}
-  .s-lib{--u:3.2px;perspective:900px}
-  .s-lib-row{gap:2px}
+  .s-shelf2{--u:3px}
   .s-rooms{grid-template-columns:repeat(2,1fr);gap:14px}
   .s-room{min-height:130px;padding:30px 14px 14px}
   .s-room b{font-size:19px}
