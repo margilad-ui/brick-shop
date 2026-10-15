@@ -1,7 +1,7 @@
 // BRICK Shop · assets function
 // Processes pending rows of bs_asset_jobs: copies each file from an allowed public URL (OpenArt CDN, GitHub, Brickset)
 // into the public storage bucket "bs-assets". A job with content_type 'key' chroma-keys a green-screen PNG/JPG
-// into a transparent PNG. Jobs are created only from SQL (owner side), so calling this function without a job
+// into a transparent PNG; 'fit:<height>' makes a web-size copy of a PNG. Jobs are created only from SQL (owner side), so calling this function without a job
 // does nothing. Triggered from SQL via pg_net; no secrets involved.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -39,6 +39,13 @@ async function keyGreen(bytes: Uint8Array): Promise<Uint8Array> {
   return await img.encode(6);
 }
 
+// resize to a given height (width follows), keeps transparency
+async function fitHeight(bytes: Uint8Array, h: number): Promise<Uint8Array> {
+  const img = await Image.decode(bytes);
+  if (img.height > h) img.resize(Image.RESIZE_AUTO, h);
+  return await img.encode(6);
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
   const sb = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -70,6 +77,9 @@ Deno.serve(async (req) => {
       let bytes = new Uint8Array(await res.arrayBuffer());
       let contentType = j.content_type || res.headers.get("content-type") || "application/octet-stream";
       if (j.content_type === "key") { bytes = await keyGreen(bytes); contentType = "image/png"; }
+      // 'fit:600' = resize a PNG (alpha kept) to that height, for web-size copies of the big keyed renders
+      const fit = /^fit:(\d+)$/.exec(j.content_type || "");
+      if (fit) { bytes = await fitHeight(bytes, Number(fit[1])); contentType = "image/png"; }
       const { error } = await sb.storage.from(BUCKET).upload(j.path, bytes, { contentType, upsert: true, cacheControl: "31536000" });
       if (error) throw error;
       const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(j.path);
