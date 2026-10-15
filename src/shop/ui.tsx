@@ -124,9 +124,9 @@ export function Footer() {
     <div className="s-wrap s-footer-in">
       <div className="s-footer-brand"><Logo className="light" /><span>{t('about_sub')}</span></div>
       <nav className="s-footer-nav" aria-label="footer"><Link to="/sets">{t('nav_sets')}</Link><Link to="/collectors">{t('nav_collectors')}</Link><Link to="/about">{t('nav_about')}</Link><a href={waLink(DEFAULT_WA, lang() === 'he' ? 'היי, הגעתי מ BRICK Shop' : 'Hi, I came from BRICK Shop')} target="_blank" rel="noopener">WhatsApp</a></nav>
-      <div className="s-footer-joey"><Clip src={CLIP.peek} poster={JOEY.peek} className="s-peek" /></div>
     </div>
-    <div className="s-wrap s-footer-legal"><p>{t('legal')}</p><p>{t('footer_made')}</p></div>
+    <div className="s-footer-joey"><Clip src={CLIP.peek} poster={JOEY.peek} className="s-peek" /></div>
+    <div className="s-wrap s-footer-legal"><p>{t('legal')}</p><p className="ltr">{t('footer_made')}</p></div>
   </footer>
 }
 function lang() { return getLang() }
@@ -225,11 +225,14 @@ export function Feedback() {
 export function Intro({ onDone }: { onDone: () => void }) {
   const t = useT()
   const [phase, setPhase] = useState(0)
+  const [joey, setJoey] = useState(false)
   useEffect(() => {
-    const steps = [300, 1400, 2600, 3900]
+    const steps = [300, 1400, 2400]
     const ts = steps.map((ms, i) => setTimeout(() => setPhase(i + 1), ms))
-    const end = setTimeout(onDone, 4700)
-    return () => { ts.forEach(clearTimeout); clearTimeout(end) }
+    const j = setTimeout(() => setJoey(true), 1500)
+    const open = setTimeout(() => setPhase(4), 5600)   // doors open
+    const end = setTimeout(onDone, 6400)
+    return () => { ts.forEach(clearTimeout); clearTimeout(j); clearTimeout(open); clearTimeout(end) }
   }, [onDone])
   return <div className={`s-intro p${phase}`} role="dialog" aria-label="BRICK HOUSE">
     <div className="s-door a" aria-hidden="true" /><div className="s-door b" aria-hidden="true" />
@@ -240,7 +243,8 @@ export function Intro({ onDone }: { onDone: () => void }) {
         <span className="w">CK</span>
       </div>
       <div className="s-intro-line"><span>{t('hero_l1')}</span><span>{t('hero_l2')}</span></div>
-      <div className="s-intro-joey"><Clip src={CLIP.runLR} poster={JOEY.run} loop={false} rate={1.15} /></div>
+      {/* the clip element exists from the start so it buffers while the logo builds; it is revealed at 1.5s */}
+      <div className={'s-intro-joey ' + (joey ? 'on' : '')}><Clip src={CLIP.runLR} poster={JOEY.run} loop={false} rate={1.1} playing={joey} /></div>
     </div>
     <button type="button" className="s-intro-skip" onClick={onDone}>{t('skip')}</button>
   </div>

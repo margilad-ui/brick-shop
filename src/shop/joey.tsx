@@ -47,24 +47,31 @@ export function Clip({ src, poster, className = '', loop = true, playing = true,
     gl.uniform1f(gl.getUniformLocation(prog, 'lo'), lo); gl.uniform1f(gl.getUniformLocation(prog, 'hi'), hi)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
     let raf = 0; let alive = true
+    // the keyed output is rendered at half the clip size: plenty for the screen, a quarter of the pixels to push
+    const scale = 0.5
+    const vfc = 'requestVideoFrameCallback' in video
     const draw = () => {
       if (!alive) return
       if (video.readyState >= 2) {
-        if (canvas.width !== video.videoWidth) { canvas.width = video.videoWidth; canvas.height = video.videoHeight; gl.viewport(0, 0, canvas.width, canvas.height) }
+        const w = Math.round(video.videoWidth * scale), h = Math.round(video.videoHeight * scale)
+        if (canvas.width !== w) { canvas.width = w; canvas.height = h; gl.viewport(0, 0, w, h) }
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video)
         gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
         if (!ready) setReady(true)
       }
-      raf = requestAnimationFrame(draw)
+      if (vfc) (video as HTMLVideoElement & { requestVideoFrameCallback: (cb: () => void) => number }).requestVideoFrameCallback(draw)
+      else raf = requestAnimationFrame(draw)
     }
     video.addEventListener('ended', () => onEnded && onEnded())
     video.addEventListener('error', () => setFallback(true))
-    video.play().then(() => { raf = requestAnimationFrame(draw) }).catch(() => setFallback(true))
+    const start = () => video.play().then(() => { if (!video.dataset.drawing) { video.dataset.drawing = '1'; draw() } }).catch(() => setFallback(true))
+    video.addEventListener('bs-start', start)
+    if (playing) start(); else video.load()
     return () => { alive = false; cancelAnimationFrame(raf); video.pause(); video.src = ''; videoRef.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, fallback])
 
-  useEffect(() => { const v = videoRef.current; if (!v) return; if (playing) v.play().catch(() => { }); else v.pause() }, [playing])
+  useEffect(() => { const v = videoRef.current; if (!v) return; if (playing) { if (!v.dataset.drawing) v.dispatchEvent(new Event('bs-start')); else v.play().catch(() => { }) } else v.pause() }, [playing])
 
   if (fallback) return <span className={'clip fallback ' + className} style={style}>{poster && <img src={poster} alt="" className="clip-poster" />}</span>
   return <span className={'clip ' + className} style={style}>

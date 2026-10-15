@@ -3,7 +3,7 @@ import { useT } from '../i18n'
 import { isNew, isRare, themeColor, type ShopItem } from '../data'
 import { Brick, Bubble, Link, Pic, SetCard, Stud } from '../ui'
 import { Clip, CLIP, JOEY } from '../joey'
-import { BrickRain } from '../rain'
+import { FloatingBricks } from '../bricks'
 import { navigate } from '../router'
 
 export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }) {
@@ -29,7 +29,7 @@ export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }
   return <main className="s-home" style={world ? { ['--accent' as string]: `var(--${themeColor(world)})` } : undefined}>
     {/* hero: the yellow room, with brick rain and Joey at the shelf */}
     <section className="s-hero">
-      <BrickRain />
+      <FloatingBricks />
       <div className="s-wrap s-hero-in">
         <div className="s-hero-text">
           <h1 className="s-display"><span>{t('hero_l1')}</span><span>{t('hero_l2')}</span></h1>
@@ -39,12 +39,12 @@ export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }
         </div>
         <div className="s-hero-stage">
           <div className="s-shelf" aria-hidden="true">
-            <div className="s-shelf-boxes">{heroPics.slice(0, 4).map((p, i) => <Link to={`/set/${p.set_num}`} key={p.id} className={`s-shelf-box b${i}`} tabIndex={-1}><Pic src={p.image_url} eager /></Link>)}</div>
-            <div className="s-shelf-plank" />
+            <div className="s-shelf-boxes">{heroPics.slice(0, 3).map((p, i) => <Link to={`/set/${p.set_num}`} key={p.id} className={`s-shelf-box b${i}`} tabIndex={-1}><Pic src={p.image_url} eager /></Link>)}</div>
+            <div className="s-shelf-plank" /><div className="s-shelf-bracket a" /><div className="s-shelf-bracket b" />
           </div>
           <div className="s-hero-joey">
-            <div className="s-hero-bubble"><b>{t('joey_hi')}</b><Bubble lines={joeyLines} /></div>
             <Clip src={CLIP.greet} poster={JOEY.wave} className="s-greet" />
+            <div className="s-hero-bubble"><b>{t('joey_hi')}</b><Bubble lines={joeyLines} /></div>
           </div>
         </div>
       </div>
@@ -70,7 +70,7 @@ export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }
 
     {/* Joey's picks */}
     <section className="s-wrap s-section">
-      <div className="s-section-head"><div><h2 className="s-h2">{t('picks_title')}</h2><p className="s-lead">{t('picks_sub')}</p></div><img src={JOEY.curious} alt="" className="s-section-joey" /></div>
+      <div className="s-section-head"><span className="s-stamp"><img src={JOEY.curious} alt="" /></span><div><h2 className="s-h2">{t('picks_title')}</h2><p className="s-lead">{t('picks_sub')}</p></div></div>
       <div className="s-grid">{loading ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="s-card s-skel" />) : picks.map((p, i) => <SetCard key={p.id} item={p} eager={i < 4} />)}</div>
       <div className="s-center"><Brick color="ink" href="/sets">{t('see_all')}</Brick></div>
     </section>
