@@ -69,10 +69,10 @@ export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }
     </section>
 
     {/* Joey's picks */}
-    <section className="s-wrap s-section">
+    <section className="s-wrap s-section s-picks">
       <div className="s-section-head"><span className="s-stamp"><img src={JOEY.curious} alt="" /></span><div><h2 className="s-h2">{t('picks_title')}</h2><p className="s-lead">{t('picks_sub')}</p></div></div>
       <div className="s-grid">{loading ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="s-card s-skel" />) : picks.map((p, i) => <SetCard key={p.id} item={p} eager={i < 4} />)}</div>
-      <div className="s-center"><Brick color="ink" href="/sets">{t('see_all')}</Brick></div>
+      <div className="s-center"><Brick color="ink" href="/sets" className="big">{t('see_all')}</Brick></div>
     </section>
 
     {/* worlds: the room changes color */}

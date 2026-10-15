@@ -125,8 +125,10 @@ export function Footer() {
       <div className="s-footer-brand"><Logo className="light" /><span>{t('about_sub')}</span></div>
       <nav className="s-footer-nav" aria-label="footer"><Link to="/sets">{t('nav_sets')}</Link><Link to="/collectors">{t('nav_collectors')}</Link><Link to="/about">{t('nav_about')}</Link><a href={waLink(DEFAULT_WA, lang() === 'he' ? 'היי, הגעתי מ BRICK Shop' : 'Hi, I came from BRICK Shop')} target="_blank" rel="noopener">WhatsApp</a></nav>
     </div>
-    <div className="s-footer-joey"><Clip src={CLIP.peek} poster={JOEY.peek} className="s-peek" /></div>
-    <div className="s-wrap s-footer-legal"><p>{t('legal')}</p><p className="ltr">{t('footer_made')}</p></div>
+    <div className="s-wrap s-footer-legal">
+      <p>{t('legal')}</p>
+      <div className="s-footer-made"><div className="s-footer-joey"><Clip src={CLIP.peek} poster={JOEY.peek} className="s-peek" /></div><p className="ltr">{t('footer_made')}</p></div>
+    </div>
   </footer>
 }
 function lang() { return getLang() }

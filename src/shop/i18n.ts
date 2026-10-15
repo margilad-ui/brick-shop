@@ -27,8 +27,8 @@ const D = {
   demo_tag: ['דוגמה', 'Sample'],
   skip: ['דלג', 'Skip'],
   // hero
-  hero_l1: ['Come in.', 'Come in.'],
-  hero_l2: ['Build something.', 'Build something.'],
+  hero_l1: ['תיכנסו.', 'Come in.'],
+  hero_l2: ['תבנו משהו.', 'Build something.'],
   hero_sub: ['ערכות חדשות, סגורות במפעל, מהאוסף של הבית.', 'New, factory-sealed sets from the house collection.'],
   hero_p: ['ערכות שעדיין על המדף בחנויות במחיר שמתחרה בהן, וערכות שפרשו מייצור, מתנות רכישה ונדירים שכבר לא תמצאו בשום חנות. איסוף מראש פינה או משלוח.', 'Sets still on store shelves at a price that competes with them, and retired sets, gifts with purchase and rarities you will not find in any shop. Pickup in Rosh Pina or delivery.'],
   hero_cta: ['לכל הערכות', 'All sets'],
