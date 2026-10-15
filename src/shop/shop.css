@@ -354,21 +354,14 @@ img{max-width:100%;display:block}
 .s-fetched.on{transform:translate(-50%,0);visibility:visible}[dir=rtl] .s-fetched.on{transform:translate(50%,0)}
 .s-fetched img{width:54px}
 .s-fly{position:fixed;z-index:70;pointer-events:none;object-fit:contain;border-radius:10px;background:#fff;transition:all .72s cubic-bezier(.3,.9,.35,1);box-shadow:var(--shadow)}
-/* The runner frame is --F wide (centered). The frame itself travels so Joey enters and leaves at the real screen edges. */
-.s-runner{position:fixed;left:0;right:0;bottom:-5.5vw;z-index:35;pointer-events:none;--F:46vw;opacity:0}
+.s-runner{position:fixed;left:0;right:0;bottom:-5.5vw;z-index:35;pointer-events:none;--F:100vw;opacity:0}
 .s-runner.go{opacity:1;animation:bs-run var(--dur) linear both}
-.s-runner .clip{width:100vw;transform:scale(.46);transform-origin:50% 100%}
-.s-runner.c-run{--x0:calc(52vw - .41*var(--F));--x1:calc(-52vw - .06*var(--F))}
-.s-runner.c-lr{--x0:calc(-52vw + .39*var(--F));--x1:calc(52vw - .02*var(--F))}
-.s-runner.c-steal{--x0:calc(-52vw + .36*var(--F));--x1:calc(52vw - .04*var(--F))}
-.s-runner.c-jump{--x0:calc(-52vw + .35*var(--F));--x1:calc(52vw - .04*var(--F))}
-.s-runner.c-look{--x0:calc(52vw - .25*var(--F));--x1:calc(-52vw + .1*var(--F))}
-.s-runner.c-look.go{animation-name:bs-run-pause}
-.s-runner.c-tumble{--x0:calc(52vw - .24*var(--F))}
-.s-runner.c-tumble.go{animation-name:bs-run-settle}
-@keyframes bs-run{from{transform:translateX(var(--x0))}to{transform:translateX(var(--x1))}}
-@keyframes bs-run-pause{0%{transform:translateX(var(--x0));opacity:1}25%{transform:translateX(0)}76%{transform:translateX(0)}92%{opacity:1}100%{transform:translateX(var(--x1));opacity:0}}
-@keyframes bs-run-settle{0%{transform:translateX(var(--x0));opacity:1}33%{transform:translateX(0)}88%{transform:translateX(0);opacity:1}100%{transform:translateX(0);opacity:0}}
+.s-runner .clip{display:block;width:var(--F);margin-inline-start:calc((100vw - var(--F)) / 2)}
+.s-runner.rl{--x0:16vw;--x1:-16vw}
+.s-runner.lr{--x0:-16vw;--x1:16vw}
+.s-runner.look.go{animation-name:bs-run-look}
+@keyframes bs-run{0%{transform:translateX(var(--x0))}15%{transform:translateX(0)}85%{transform:translateX(0)}100%{transform:translateX(var(--x1))}}
+@keyframes bs-run-look{0%{transform:translateX(var(--x0))}14%{transform:translateX(0)}88%{transform:translateX(0)}100%{transform:translateX(var(--x1))}}
 
 /* ---------- checkout ---------- */
 .s-steps{list-style:none;margin:16px 0 26px;padding:0;display:flex;gap:10px;flex-wrap:wrap}
@@ -523,8 +516,7 @@ img{max-width:100%;display:block}
   .s-card{padding:12px}
   .s-tiles{grid-template-columns:repeat(2,1fr)}
   .s-buy-joey{width:110px;inset-inline-end:-10px;bottom:-14px}
-  .s-runner{--F:72vw}
-  .s-runner .clip{transform:scale(.72)}
+  .s-runner{--F:170vw}
   .s-intro-joey .clip{transform:scale(1)}
   .s-joeysays{grid-template-columns:64px 1fr}
   .s-joeysays img{width:64px}
@@ -540,7 +532,7 @@ img{max-width:100%;display:block}
   .s-fb{inset-inline-start:auto;inset-inline-end:12px;bottom:calc(72px + var(--sab))}
   .s-fb-panel{inset-inline-start:auto;inset-inline-end:12px;bottom:calc(120px + var(--sab))}
   .s-app{padding-bottom:calc(64px + var(--sab))}
-  .s-runner{bottom:calc(64px + var(--sab) - 16vw)}
+  .s-runner{bottom:calc(64px + var(--sab) - 9.5vw)}
 }
 
 /* mobile bottom nav */

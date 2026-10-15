@@ -9,7 +9,9 @@ export const JOEY = {
   wave: STORE + 'keyed/wave.png', run: STORE + 'keyed/run.png', wait: STORE + 'keyed/wait.png', detective: STORE + 'keyed/detective.png', present: STORE + 'keyed/present.png',
 }
 export const CLIP = { run: STORE + 'video/run.mp4', greet: STORE + 'video/greet.mp4', peek: STORE + 'video/peek.mp4', nap: STORE + 'video/nap.mp4',
-  runLR: STORE + 'video/run-lr.mp4', look: STORE + 'video/look.mp4', steal: STORE + 'video/steal.mp4', jump: STORE + 'video/jump.mp4', tumble: STORE + 'video/tumble.mp4', sniff: STORE + 'video/sniff.mp4' }
+  runLR: STORE + 'video/run-lr.mp4', look: STORE + 'video/look.mp4', steal: STORE + 'video/steal.mp4', jump: STORE + 'video/jump.mp4', tumble: STORE + 'video/tumble.mp4', sniff: STORE + 'video/sniff.mp4',
+  // wide clips: Joey small in a full-width frame, so he enters and leaves at the real screen edges
+  wRun: STORE + 'video/wide-run2.mp4', wRunLR: STORE + 'video/wide-run-lr.mp4', wLook: STORE + 'video/wide-look.mp4', wFetch: STORE + 'video/wide-fetch.mp4', wJump: STORE + 'video/wide-jump.mp4' }
 
 export function reducedMotion() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches }
 

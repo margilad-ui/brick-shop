@@ -176,18 +176,17 @@ export function CartDrawer() {
 }
 
 /* Joey occasionally runs across the bottom of the screen */
-/* Each clip is a 16:9 frame that we show small, so the frame's edges sit inside the screen.
-   To make Joey enter and leave at the real screen edges, the whole frame travels across the
-   viewport while the clip plays (profile per clip: where he is at the start and the end).
-   The travel starts only when the first video frame is drawn, so picture and motion stay in sync. */
+/* Wide clips: Joey is small inside a full-width 16:9 frame, so he runs from one real screen edge
+   to the other. He is still just inside the frame at the first and last moments, so the frame
+   slides a little at the start and the end (never mid-run) to push him fully off screen.
+   The slide starts only when the first video frame is drawn, so picture and motion stay in sync. */
 type RunClip = { src: string; cls: string; rate: number; dur: number }
 const RUNS: RunClip[] = [
-  { src: CLIP.run, cls: 'c-run', rate: 1.6, dur: 5.03 },       // right to left, straight through
-  { src: CLIP.runLR, cls: 'c-lr', rate: 1.2, dur: 4.03 },      // left to right, straight through
-  { src: CLIP.look, cls: 'c-look', rate: 1.25, dur: 6.04 },    // right to left, stops to look at you
-  { src: CLIP.steal, cls: 'c-steal', rate: 1.3, dur: 5.03 },   // left to right with the box
-  { src: CLIP.jump, cls: 'c-jump', rate: 1.15, dur: 5.03 },    // left to right, jumps for the brick
-  { src: CLIP.tumble, cls: 'c-tumble', rate: 1.2, dur: 6.04 }, // from the right, knocks the tower, stays
+  { src: CLIP.wRun, cls: 'rl', rate: 1.15, dur: 6.04 },      // right to left
+  { src: CLIP.wRunLR, cls: 'lr', rate: 1.15, dur: 6.04 },    // left to right
+  { src: CLIP.wLook, cls: 'rl look', rate: 1, dur: 8.04 },   // right to left, sits and looks at you
+  { src: CLIP.wFetch, cls: 'rl', rate: 1.2, dur: 6.04 },     // right to left with a brick
+  { src: CLIP.wJump, cls: 'lr', rate: 1.05, dur: 6.04 },     // left to right, jumps for the brick
 ]
 export function Runner() {
   const [clip, setClip] = useState<RunClip | null>(null)
