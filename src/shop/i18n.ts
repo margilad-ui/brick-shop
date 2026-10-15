@@ -126,6 +126,9 @@ const D = {
   spec_ean: ['ברקוד', 'Barcode'],
   spec_packaging: ['אריזה', 'Packaging'],
   more_world: ['עוד מהעולם הזה', 'More from this world'],
+  read_more: ['קראו עוד', 'Read more'],
+  read_less: ['פחות', 'Less'],
+  col_joey: ['ג\'ואי בודק כל ערכה בעצמו. קופסה סגורה, מדבקות מקוריות, ריח של חדש.', 'Joey checks every set himself. Sealed box, original seals, that new smell.'],
   share: ['שתפו', 'Share'],
   not_found_set: ['הערכה הזו לא על המדף כרגע.', 'This set is not on the shelf right now.'],
   // cart

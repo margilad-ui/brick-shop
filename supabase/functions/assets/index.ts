@@ -47,6 +47,22 @@ Deno.serve(async (req) => {
   for (const j of jobs || []) {
     await sb.from("bs_asset_jobs").update({ status: "running" }).eq("id", j.id);
     try {
+      if (j.content_type === "brickset") {
+        // j.url = set_num, j.path = brickset setID. Pulls the official additional images (lifestyle shots, angles) into bs_catalog_images.
+        const { data: sec } = await sb.from("bs_secrets").select("value").eq("name", "BRICKSET_API_KEY").maybeSingle();
+        const key = sec?.value || Deno.env.get("BRICKSET_API_KEY");
+        if (!key) throw new Error("no brickset key");
+        const r = await fetch(`https://brickset.com/api/v3.asmx/getAdditionalImages?apiKey=${encodeURIComponent(key)}&setID=${encodeURIComponent(j.path)}`);
+        if (!r.ok) throw new Error(`brickset ${r.status}`);
+        const d = await r.json();
+        if (d.status !== "success") throw new Error(d.message || "brickset error");
+        const images = (d.additionalImages || []).map((x: { imageURL?: string; thumbnailURL?: string }) => ({ image: x.imageURL, thumb: x.thumbnailURL })).filter((x: { image?: string }) => x.image);
+        const { error } = await sb.from("bs_catalog_images").upsert({ set_num: j.url, brickset_id: Number(j.path), images, fetched_at: new Date().toISOString() });
+        if (error) throw error;
+        await sb.from("bs_asset_jobs").update({ status: "done", bytes: images.length, error: null }).eq("id", j.id);
+        out.push({ id: j.id, ok: true, images: images.length });
+        continue;
+      }
       if (!ALLOWED.some((re) => re.test(j.url))) throw new Error("url not allowed");
       if (!/^[a-z0-9_\-/.]+$/i.test(j.path) || j.path.includes("..")) throw new Error("bad path");
       const res = await fetch(j.url);

@@ -14,8 +14,9 @@ import { About, NotFound } from './pages/About'
 export default function Shop() {
   useLang(); const { path } = useRoute()
   const { items, config, loading, error } = useShop()
-  const [intro, setIntro] = useState(() => { try { return sessionStorage.getItem('bs_intro') !== '1' && !location.search.includes('nointro') } catch { return false } })
-  const endIntro = useCallback(() => { setIntro(false); try { sessionStorage.setItem('bs_intro', '1') } catch { /* ignore */ } }, [])
+  // the opening moment: once per 12 hours per browser, always with ?intro, never with ?nointro
+  const [intro, setIntro] = useState(() => { try { if (location.search.includes('nointro')) return false; if (location.search.includes('intro')) return true; const at = Number(localStorage.getItem('bs_intro_at') || 0); return Date.now() - at > 12 * 3600e3 } catch { return false } })
+  const endIntro = useCallback(() => { setIntro(false); try { localStorage.setItem('bs_intro_at', String(Date.now())) } catch { /* ignore */ } }, [])
   useEffect(() => { applyDir(); document.body.classList.add('s-body'); return () => document.body.classList.remove('s-body') }, [])
   useEffect(() => {
     const titles: Record<string, string> = { '/': 'BRICK Shop · BRICK HOUSE', '/sets': 'כל הערכות · BRICK Shop', '/collectors': 'לאספנים · BRICK Shop', '/checkout': 'הזמנה · BRICK Shop', '/about': 'BRICK HOUSE' }

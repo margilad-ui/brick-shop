@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useT } from '../i18n'
 import { isNew, isRare, themeColor, type ShopItem } from '../data'
 import { Brick, Bubble, Link, Pic, SetCard, Stud } from '../ui'
-import { Clip, CLIP, JOEY, reducedMotion } from '../joey'
+import { Clip, CLIP, JOEY } from '../joey'
+import { BrickRain } from '../rain'
 import { navigate } from '../router'
 
 export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }) {
@@ -23,20 +24,12 @@ export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }
   }
   const joeyLines = t('joey_lines').split('\n')
 
-  /* parallax shelf: boxes drift with the pointer */
-  const shelf = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (reducedMotion()) return
-    const el = shelf.current; if (!el) return
-    const move = (e: PointerEvent) => { const r = el.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; el.style.setProperty('--px', x.toFixed(3)); el.style.setProperty('--py', y.toFixed(3)) }
-    const sec = el.closest('.s-hero') as HTMLElement; sec.addEventListener('pointermove', move)
-    return () => sec.removeEventListener('pointermove', move)
-  }, [])
   const [world, setWorld] = useState<string | null>(null)
 
   return <main className="s-home" style={world ? { ['--accent' as string]: `var(--${themeColor(world)})` } : undefined}>
-    {/* hero: the yellow room */}
+    {/* hero: the yellow room, with brick rain and Joey at the shelf */}
     <section className="s-hero">
+      <BrickRain />
       <div className="s-wrap s-hero-in">
         <div className="s-hero-text">
           <h1 className="s-display"><span>{t('hero_l1')}</span><span>{t('hero_l2')}</span></h1>
@@ -45,12 +38,13 @@ export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }
           <div className="s-hero-ctas"><Brick color="ink" href="/sets">{t('hero_cta')}</Brick><Brick color="paper" href="/sets?f=retired">{t('hero_cta2')}</Brick></div>
         </div>
         <div className="s-hero-stage">
-          <div className="s-shelf" ref={shelf} aria-hidden="true">
-            {heroPics.map((p, i) => <Link to={`/set/${p.set_num}`} key={p.id} className={`s-shelf-box b${i}`} style={{ ['--d' as string]: (0.4 + (i % 4) * 0.25).toString() }} tabIndex={-1}><Pic src={p.image_url} eager /></Link>)}
+          <div className="s-shelf" aria-hidden="true">
+            <div className="s-shelf-boxes">{heroPics.slice(0, 4).map((p, i) => <Link to={`/set/${p.set_num}`} key={p.id} className={`s-shelf-box b${i}`} tabIndex={-1}><Pic src={p.image_url} eager /></Link>)}</div>
+            <div className="s-shelf-plank" />
           </div>
           <div className="s-hero-joey">
-            <Clip src={CLIP.greet} poster={JOEY.wave} className="s-greet" />
             <div className="s-hero-bubble"><b>{t('joey_hi')}</b><Bubble lines={joeyLines} /></div>
+            <Clip src={CLIP.greet} poster={JOEY.wave} className="s-greet" />
           </div>
         </div>
       </div>

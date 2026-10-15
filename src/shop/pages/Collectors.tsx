@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { fmtPrice, useT } from '../i18n'
 import { isRare, themeColor, type ShopItem } from '../data'
 import { Brick, Link, Pic, SetCard } from '../ui'
-import { JOEY } from '../joey'
+import { Clip, CLIP, JOEY } from '../joey'
 import { addToCart } from '../cart'
 import { flyToCart } from '../ui'
 
@@ -15,7 +15,7 @@ export function Collectors({ items, loading }: { items: ShopItem[]; loading: boo
   return <main className="s-vault">
     <section className="s-wrap s-vault-head">
       <div><h1 className="s-h1 light">{t('col_title')}</h1><p className="s-lead light">{t('col_sub')}</p></div>
-      <img src={JOEY.head} alt="" className="s-vault-joey" />
+      <div className="s-vault-joey"><Clip src={CLIP.sniff} poster={JOEY.detective} className="s-sniff" /><span className="s-vault-bubble">{t('col_joey')}</span></div>
     </section>
     {feature && <section className={`s-wrap s-feature c-${themeColor(feature.theme)}`}>
       <Link to={`/set/${feature.set_num}`} className="s-feature-pic"><Pic src={feature.image_url} alt={feature.name || ''} eager /></Link>

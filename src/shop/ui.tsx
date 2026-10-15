@@ -46,7 +46,7 @@ export function Bubble({ lines, className = '', interval = 5200 }: { lines: stri
 
 /* ---------- set card ---------- */
 export function SetCard({ item, eager = false }: { item: ShopItem; eager?: boolean }) {
-  const t = useT(); const cart = useCart(); const n = inCart(item.id)
+  const t = useT(); useCart(); const n = inCart(item.id)
   const color = themeColor(item.theme)
   const [bump, setBump] = useState(false)
   const to = `/set/${item.set_num || item.id}`
@@ -56,19 +56,21 @@ export function SetCard({ item, eager = false }: { item: ShopItem; eager?: boole
     setBump(true); setTimeout(() => setBump(false), 700)
     flyToCart((e.currentTarget as HTMLElement).closest('.s-card')?.querySelector('img') as HTMLImageElement | null, item.image_url)
   }
-  void cart
+  const meta = [item.number, item.theme, item.pieces ? `${item.pieces.toLocaleString('en-US')} ${t('pieces')}` : ''].filter(Boolean)
   return <article className={`s-card c-${color} ${bump ? 'bump' : ''}`}>
     <span className="s-card-studs" aria-hidden="true"><i /><i /><i /><i /></span>
-    <Link to={to} className="s-card-pic"><Pic src={item.image_url} alt={item.name || ''} eager={eager} /></Link>
-    <div className="s-card-tags">
-      {item.retired && <span className="s-tag t-red">{t('retired_tag')}</span>}
-      {isNew(item) && <span className="s-tag t-green">{t('new_tag')}</span>}
-      {item.qty === 1 && !item.demo && <span className="s-tag t-ink">{t('last_one')}</span>}
-      {item.demo && <span className="s-tag t-demo">{t('demo_tag')}</span>}
-    </div>
+    <Link to={to} className="s-card-pic">
+      <Pic src={item.image_url} alt={item.name || ''} eager={eager} />
+      <span className="s-card-tags">
+        {item.retired && <span className="s-tag t-red">{t('retired_tag')}</span>}
+        {isNew(item) && <span className="s-tag t-green">{t('new_tag')}</span>}
+        {item.qty === 1 && !item.demo && <span className="s-tag t-ink">{t('last_one')}</span>}
+        {item.demo && <span className="s-tag t-demo">{t('demo_tag')}</span>}
+      </span>
+    </Link>
     <div className="s-card-body">
       <Link to={to} className="s-card-name">{item.name}</Link>
-      <div className="s-card-meta ltr"><span>{item.number}</span>{item.pieces ? <span>{item.pieces.toLocaleString('en-US')} {t('pieces')}</span> : null}{item.theme && <span>{item.theme}</span>}</div>
+      <div className="s-card-meta">{meta.map((m, i) => <span key={i} className="ltr">{m}</span>)}</div>
     </div>
     <div className="s-card-foot">
       <span className="s-price">{fmtPrice(item.price)}</span>
@@ -118,14 +120,13 @@ export function Header({ onSearch }: { onSearch?: (q: string) => void }) {
 export function Footer() {
   const t = useT()
   return <footer className="s-footer">
+    <div className="s-footer-edge" aria-hidden="true" />
     <div className="s-wrap s-footer-in">
+      <div className="s-footer-brand"><Logo className="light" /><span>{t('about_sub')}</span></div>
+      <nav className="s-footer-nav" aria-label="footer"><Link to="/sets">{t('nav_sets')}</Link><Link to="/collectors">{t('nav_collectors')}</Link><Link to="/about">{t('nav_about')}</Link><a href={waLink(DEFAULT_WA, lang() === 'he' ? 'היי, הגעתי מ BRICK Shop' : 'Hi, I came from BRICK Shop')} target="_blank" rel="noopener">WhatsApp</a></nav>
       <div className="s-footer-joey"><Clip src={CLIP.peek} poster={JOEY.peek} className="s-peek" /></div>
-      <div className="s-footer-text">
-        <Logo className="light" />
-        <p>{t('legal')}</p>
-        <p className="s-footer-made">{t('footer_made')} · <a href={waLink(DEFAULT_WA, lang() === 'he' ? 'היי, הגעתי מ BRICK Shop' : 'Hi, I came from BRICK Shop')} target="_blank" rel="noopener">WhatsApp</a></p>
-      </div>
     </div>
+    <div className="s-wrap s-footer-legal"><p>{t('legal')}</p><p>{t('footer_made')}</p></div>
   </footer>
 }
 function lang() { return getLang() }
@@ -174,17 +175,22 @@ export function CartDrawer() {
 
 /* Joey occasionally runs across the bottom of the screen */
 export function Runner() {
-  const [show, setShow] = useState(false)
+  const [clip, setClip] = useState<null | { src: string; cls: string; rate: number }>(null)
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    let t = setTimeout(() => setShow(true), 9000)
-    const loop = () => { t = setTimeout(() => setShow(true), 38000 + Math.random() * 20000) }
-    const off = () => { setShow(false); loop() }
+    const pool: { src: string; cls: string; rate: number }[] = [
+      { src: CLIP.run, cls: 'ground', rate: 1.6 }, { src: CLIP.runLR, cls: 'ground', rate: 1.2 }, { src: CLIP.look, cls: 'ground', rate: 1.25 },
+      { src: CLIP.steal, cls: 'ground', rate: 1.3 }, { src: CLIP.jump, cls: 'air', rate: 1.15 }, { src: CLIP.tumble, cls: 'ground', rate: 1.2 },
+    ]
+    let last = -1
+    const pick = () => { let i; do { i = Math.floor(Math.random() * pool.length) } while (i === last && pool.length > 1); last = i; setClip(pool[i]) }
+    let t = setTimeout(pick, 7000)
+    const off = () => { setClip(null); t = setTimeout(pick, 30000 + Math.random() * 25000) }
     window.addEventListener('bs-run-done', off)
     return () => { clearTimeout(t); window.removeEventListener('bs-run-done', off) }
   }, [])
-  if (!show) return null
-  return <div className="s-runner" aria-hidden="true"><Clip src={CLIP.run} loop={false} onEnded={() => window.dispatchEvent(new Event('bs-run-done'))} /></div>
+  if (!clip) return null
+  return <div className={'s-runner ' + clip.cls} aria-hidden="true"><Clip src={clip.src} loop={false} rate={clip.rate} onEnded={() => window.dispatchEvent(new Event('bs-run-done'))} /></div>
 }
 
 /* ---------- review notes (floating) ---------- */
@@ -220,20 +226,22 @@ export function Intro({ onDone }: { onDone: () => void }) {
   const t = useT()
   const [phase, setPhase] = useState(0)
   useEffect(() => {
-    const steps = [400, 1500, 2300, 3100]
+    const steps = [300, 1400, 2600, 3900]
     const ts = steps.map((ms, i) => setTimeout(() => setPhase(i + 1), ms))
-    const end = setTimeout(onDone, 3600)
+    const end = setTimeout(onDone, 4700)
     return () => { ts.forEach(clearTimeout); clearTimeout(end) }
   }, [onDone])
   return <div className={`s-intro p${phase}`} role="dialog" aria-label="BRICK HOUSE">
-    <div className="s-intro-grid" aria-hidden="true" />
-    <div className="s-intro-logo" aria-hidden="true">
-      <span className="w">BR</span>
-      <span className="stack"><i className="b1" /><i className="b2" /><i className="b3" /><i className="b4" /></span>
-      <span className="w">CK</span>
-      <span className="house">HOUSE</span>
+    <div className="s-door a" aria-hidden="true" /><div className="s-door b" aria-hidden="true" />
+    <div className="s-intro-stage" aria-hidden="true">
+      <div className="s-intro-logo">
+        <span className="w">BR</span>
+        <span className="stack"><i className="b1" /><i className="b2" /><i className="b3" /><i className="b4" /></span>
+        <span className="w">CK</span>
+      </div>
+      <div className="s-intro-line"><span>{t('hero_l1')}</span><span>{t('hero_l2')}</span></div>
+      <div className="s-intro-joey"><Clip src={CLIP.runLR} poster={JOEY.run} loop={false} rate={1.15} /></div>
     </div>
-    <div className="s-intro-joey" aria-hidden="true"><img src={JOEY.run} alt="" /></div>
     <button type="button" className="s-intro-skip" onClick={onDone}>{t('skip')}</button>
   </div>
 }

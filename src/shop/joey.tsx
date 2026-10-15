@@ -6,9 +6,10 @@ const STORE = 'https://fzznhlitvigvsxhkhvwf.supabase.co/storage/v1/object/public
 export const JOEY = {
   sit: base + 'joey/sit.webp', side: base + 'joey/side.webp', head: base + 'joey/head.webp', fetch: base + 'joey/fetch.webp', oops: base + 'joey/oops.webp',
   nap: base + 'joey/nap.webp', peek: base + 'joey/peek.webp', happy: base + 'joey/happy.webp', curious: base + 'joey/curious.webp', guilty: base + 'joey/guilty.webp', sleepy: base + 'joey/sleepy.webp',
-  wave: STORE + 'keyed/wave.png', run: STORE + 'keyed/run.png', wait: STORE + 'keyed/wait.png',
+  wave: STORE + 'keyed/wave.png', run: STORE + 'keyed/run.png', wait: STORE + 'keyed/wait.png', detective: STORE + 'keyed/detective.png', present: STORE + 'keyed/present.png',
 }
-export const CLIP = { run: STORE + 'video/run.mp4', greet: STORE + 'video/greet.mp4', peek: STORE + 'video/peek.mp4', nap: STORE + 'video/nap.mp4' }
+export const CLIP = { run: STORE + 'video/run.mp4', greet: STORE + 'video/greet.mp4', peek: STORE + 'video/peek.mp4', nap: STORE + 'video/nap.mp4',
+  runLR: STORE + 'video/run-lr.mp4', look: STORE + 'video/look.mp4', steal: STORE + 'video/steal.mp4', jump: STORE + 'video/jump.mp4', tumble: STORE + 'video/tumble.mp4', sniff: STORE + 'video/sniff.mp4' }
 
 export function reducedMotion() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches }
 
@@ -21,8 +22,8 @@ void main(){ vec4 c = texture2D(t, v); float m = max(c.r, c.b); float d = c.g - 
 
 /* <Clip>: plays a green-screen mp4 through a WebGL chroma key onto a transparent canvas.
    Falls back to the still image when WebGL or autoplay is unavailable or the user prefers reduced motion. */
-export function Clip({ src, poster, className = '', loop = true, playing = true, onEnded, lo = 0.09, hi = 0.42, style }:
-  { src: string; poster?: string; className?: string; loop?: boolean; playing?: boolean; onEnded?: () => void; lo?: number; hi?: number; style?: React.CSSProperties }) {
+export function Clip({ src, poster, className = '', loop = true, playing = true, onEnded, lo = 0.09, hi = 0.42, style, rate = 1 }:
+  { src: string; poster?: string; className?: string; loop?: boolean; playing?: boolean; onEnded?: () => void; lo?: number; hi?: number; style?: React.CSSProperties; rate?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [fallback, setFallback] = useState(() => reducedMotion())
@@ -33,7 +34,7 @@ export function Clip({ src, poster, className = '', loop = true, playing = true,
     const canvas = canvasRef.current!; const gl = canvas.getContext('webgl', { premultipliedAlpha: true, alpha: true })
     if (!gl) { setFallback(true); return }
     const video = document.createElement('video')
-    video.src = src; video.muted = true; video.loop = loop; video.playsInline = true; video.crossOrigin = 'anonymous'; video.preload = 'auto'
+    video.src = src; video.muted = true; video.loop = loop; video.playsInline = true; video.crossOrigin = 'anonymous'; video.preload = 'auto'; video.playbackRate = rate
     videoRef.current = video
     const prog = gl.createProgram()!
     const mk = (type: number, s: string) => { const sh = gl.createShader(type)!; gl.shaderSource(sh, s); gl.compileShader(sh); gl.attachShader(prog, sh) }

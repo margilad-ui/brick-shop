@@ -85,3 +85,20 @@ export function isRare(i: ShopItem) { return /promotional|gwp|gift/i.test(i.subt
 export function stripHtml(s: string | null | undefined) { if (!s) return ''; const d = document.createElement('div'); d.innerHTML = s; return (d.textContent || '').replace(/\s+/g, ' ').trim() }
 export function dims(d: { height?: number; width?: number; depth?: number } | null) { if (!d || !d.width) return ''; return [d.width, d.height, d.depth].filter(Boolean).map(x => Number(x).toFixed(1).replace(/\.0$/, '')).join(' × ') + ' cm' }
 export function waLink(number: string, text: string) { return `https://wa.me/${number}?text=${encodeURIComponent(text)}` }
+
+/* official additional images (Brickset), cached in bs_catalog_images */
+export type SetImage = { image: string; thumb?: string }
+export async function loadImages(set_num: string): Promise<SetImage[]> {
+  if ((window as unknown as { __BS_MOCK?: unknown }).__BS_MOCK) return []
+  const { data } = await supabase.from('bs_catalog_images').select('images').eq('set_num', set_num).maybeSingle()
+  return ((data?.images as SetImage[]) || [])
+}
+/* turn Brickset's HTML description into readable paragraphs */
+export function paragraphs(html: string | null | undefined): string[] {
+  const text = stripHtml(html).replace(/\s+/g, ' ').trim()
+  if (!text) return []
+  const sentences = text.match(/[^.!?]+[.!?]+(\s|$)/g)?.map(s => s.trim()).filter(Boolean) || [text]
+  const out: string[] = []
+  for (let i = 0; i < sentences.length; i += 2) out.push(sentences.slice(i, i + 2).join(' '))
+  return out
+}
