@@ -34,6 +34,9 @@ export function useShelf(items: ShopItem[], max = 8) {
 
 export function BoxShelf({ boxes }: { boxes: ShelfBox[] }) {
   const [open, setOpen] = useState<string | null>(null)
+  // the 45 degree renders are heavier: fetch them quietly once the page has settled (or on the first hover)
+  const [warm, setWarm] = useState(false)
+  useEffect(() => { const t = setTimeout(() => setWarm(true), 2500); return () => clearTimeout(t) }, [])
   useEffect(() => { if (!open) return; const off = (e: Event) => { if (!(e.target as HTMLElement).closest('.s-bx')) setOpen(null) }; document.addEventListener('pointerdown', off); return () => document.removeEventListener('pointerdown', off) }, [open])
   if (!boxes.length) return null
   return <div className="s-shelf2">
@@ -41,11 +44,11 @@ export function BoxShelf({ boxes }: { boxes: ShelfBox[] }) {
       {boxes.map((b, i) => {
         const d = b.item.dims!
         const style = { ['--h' as string]: `calc(${d.height} * var(--u))`, ['--i' as string]: i } as React.CSSProperties
-        return <a key={b.item.id} href={href(`/set/${b.item.set_num}`)} className={`s-bx${open === b.item.id ? ' open' : ''}`} style={style}
+        return <a key={b.item.id} href={href(`/set/${b.item.set_num}`)} className={`s-bx${open === b.item.id ? ' open' : ''}`} style={style} onPointerEnter={() => setWarm(true)}
           onClick={e => { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); const touch = window.matchMedia('(hover: none)').matches; if (touch && open !== b.item.id) setOpen(b.item.id); else navigate(`/set/${b.item.set_num}`) }}
           aria-label={b.item.name || b.item.set_num || ''}>
           <img className="s-bx-spine" src={b.art.spine_url!} alt="" loading={i < 8 ? 'eager' : 'lazy'} draggable={false} />
-          <img className="s-bx-angle" src={b.art.angle_url!} alt="" loading="lazy" draggable={false} />
+          {warm && <img className="s-bx-angle" src={b.art.angle_url!} alt="" draggable={false} />}
           <span className="s-bx-shadow" />
         </a>
       })}
