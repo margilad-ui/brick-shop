@@ -5,6 +5,7 @@ import { Brick, Bubble, Link, Pic, SetCard, Stud } from '../ui'
 import { Clip, CLIP, JOEY } from '../joey'
 import { FloatingBricks } from '../bricks'
 import { navigate } from '../router'
+import { BoxShelf, useShelf } from '../shelf'
 
 export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }) {
   const t = useT()
@@ -23,6 +24,7 @@ export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }
     retired: items.filter(i => i.retired).length, rare: items.filter(isRare).length, fresh: items.filter(isNew).length, poly: items.filter(i => i.kind === 'polybag').length,
   }
   const joeyLines = t('joey_lines').split('\n')
+  const shelf = useShelf(items, 8)
 
   const [world, setWorld] = useState<string | null>(null)
 
@@ -38,8 +40,8 @@ export function Home({ items, loading }: { items: ShopItem[]; loading: boolean }
           <div className="s-hero-ctas"><Brick color="ink" href="/sets">{t('hero_cta')}</Brick><Brick color="paper" href="/sets?f=retired">{t('hero_cta2')}</Brick></div>
         </div>
         <div className="s-hero-stage">
-          <div className="s-shelf" aria-hidden="true">
-            <div className="s-shelf-boxes">{heroPics.slice(0, 3).map((p, i) => <Link to={`/set/${p.set_num}`} key={p.id} className={`s-shelf-box b${i}`} tabIndex={-1}><Pic src={p.image_url} eager /></Link>)}</div>
+          <div className={`s-shelf${shelf.length >= 3 ? ' lib' : ''}`} aria-hidden="true">
+            {shelf.length >= 3 ? <BoxShelf boxes={shelf} /> : <div className="s-shelf-boxes">{heroPics.slice(0, 3).map((p, i) => <Link to={`/set/${p.set_num}`} key={p.id} className={`s-shelf-box b${i}`} tabIndex={-1}><Pic src={p.image_url} eager /></Link>)}</div>}
             <div className="s-shelf-plank" /><div className="s-shelf-bracket a" /><div className="s-shelf-bracket b" />
           </div>
           <div className="s-hero-joey">

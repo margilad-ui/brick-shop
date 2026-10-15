@@ -22,8 +22,8 @@ void main(){ vec4 c = texture2D(t, v); float m = max(c.r, c.b); float d = c.g - 
 
 /* <Clip>: plays a green-screen mp4 through a WebGL chroma key onto a transparent canvas.
    Falls back to the still image when WebGL or autoplay is unavailable or the user prefers reduced motion. */
-export function Clip({ src, poster, className = '', loop = true, playing = true, onEnded, lo = 0.09, hi = 0.42, style, rate = 1 }:
-  { src: string; poster?: string; className?: string; loop?: boolean; playing?: boolean; onEnded?: () => void; lo?: number; hi?: number; style?: React.CSSProperties; rate?: number }) {
+export function Clip({ src, poster, className = '', loop = true, playing = true, onEnded, onStart, lo = 0.09, hi = 0.42, style, rate = 1 }:
+  { src: string; poster?: string; className?: string; loop?: boolean; playing?: boolean; onEnded?: () => void; onStart?: () => void; lo?: number; hi?: number; style?: React.CSSProperties; rate?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [fallback, setFallback] = useState(() => reducedMotion())
@@ -57,7 +57,7 @@ export function Clip({ src, poster, className = '', loop = true, playing = true,
         if (canvas.width !== w) { canvas.width = w; canvas.height = h; gl.viewport(0, 0, w, h) }
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video)
         gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-        if (!ready) setReady(true)
+        if (!video.dataset.ready) { video.dataset.ready = '1'; setReady(true); onStart && onStart() }
       }
       if (vfc) (video as HTMLVideoElement & { requestVideoFrameCallback: (cb: () => void) => number }).requestVideoFrameCallback(draw)
       else raf = requestAnimationFrame(draw)

@@ -93,6 +93,17 @@ export async function loadImages(set_num: string): Promise<SetImage[]> {
   const { data } = await supabase.from('bs_catalog_images').select('images').eq('set_num', set_num).maybeSingle()
   return ((data?.images as SetImage[]) || [])
 }
+/* official box faces (flat front, flat back, product shot) from the Brickset additional images, via the bs_shop_boxes view */
+export type BoxFaces = { set_num: string; front: string | null; back: string | null; prod: string | null }
+let boxCache: BoxFaces[] | null = null
+export async function loadBoxes(): Promise<BoxFaces[]> {
+  const mock = (window as unknown as { __BS_MOCK?: { boxes?: BoxFaces[] } }).__BS_MOCK
+  if (mock) return mock.boxes || []
+  if (boxCache) return boxCache
+  const { data } = await supabase.from('bs_shop_boxes').select('*').or('front.not.is.null,back.not.is.null')
+  boxCache = (data as BoxFaces[]) || []
+  return boxCache
+}
 /* turn Brickset's HTML description into readable paragraphs */
 export function paragraphs(html: string | null | undefined): string[] {
   const text = stripHtml(html).replace(/\s+/g, ' ').trim()

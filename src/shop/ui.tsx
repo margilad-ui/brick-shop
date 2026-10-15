@@ -176,23 +176,36 @@ export function CartDrawer() {
 }
 
 /* Joey occasionally runs across the bottom of the screen */
+/* Each clip is a 16:9 frame that we show small, so the frame's edges sit inside the screen.
+   To make Joey enter and leave at the real screen edges, the whole frame travels across the
+   viewport while the clip plays (profile per clip: where he is at the start and the end).
+   The travel starts only when the first video frame is drawn, so picture and motion stay in sync. */
+type RunClip = { src: string; cls: string; rate: number; dur: number }
+const RUNS: RunClip[] = [
+  { src: CLIP.run, cls: 'c-run', rate: 1.6, dur: 5.03 },       // right to left, straight through
+  { src: CLIP.runLR, cls: 'c-lr', rate: 1.2, dur: 4.03 },      // left to right, straight through
+  { src: CLIP.look, cls: 'c-look', rate: 1.25, dur: 6.04 },    // right to left, stops to look at you
+  { src: CLIP.steal, cls: 'c-steal', rate: 1.3, dur: 5.03 },   // left to right with the box
+  { src: CLIP.jump, cls: 'c-jump', rate: 1.15, dur: 5.03 },    // left to right, jumps for the brick
+  { src: CLIP.tumble, cls: 'c-tumble', rate: 1.2, dur: 6.04 }, // from the right, knocks the tower, stays
+]
 export function Runner() {
-  const [clip, setClip] = useState<null | { src: string; cls: string; rate: number }>(null)
+  const [clip, setClip] = useState<RunClip | null>(null)
+  const [go, setGo] = useState(false)
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const pool: { src: string; cls: string; rate: number }[] = [
-      { src: CLIP.run, cls: 'ground', rate: 1.6 }, { src: CLIP.runLR, cls: 'ground', rate: 1.2 }, { src: CLIP.look, cls: 'ground', rate: 1.25 },
-      { src: CLIP.steal, cls: 'ground', rate: 1.3 }, { src: CLIP.jump, cls: 'air', rate: 1.15 }, { src: CLIP.tumble, cls: 'ground', rate: 1.2 },
-    ]
     let last = -1
-    const pick = () => { let i; do { i = Math.floor(Math.random() * pool.length) } while (i === last && pool.length > 1); last = i; setClip(pool[i]) }
+    const pick = () => { let i; do { i = Math.floor(Math.random() * RUNS.length) } while (i === last && RUNS.length > 1); last = i; setGo(false); setClip(RUNS[i]) }
     let t = setTimeout(pick, 7000)
-    const off = () => { setClip(null); t = setTimeout(pick, 30000 + Math.random() * 25000) }
+    const off = () => { setClip(null); setGo(false); t = setTimeout(pick, 30000 + Math.random() * 25000) }
     window.addEventListener('bs-run-done', off)
     return () => { clearTimeout(t); window.removeEventListener('bs-run-done', off) }
   }, [])
   if (!clip) return null
-  return <div className={'s-runner ' + clip.cls} aria-hidden="true"><Clip src={clip.src} loop={false} rate={clip.rate} onEnded={() => window.dispatchEvent(new Event('bs-run-done'))} /></div>
+  const style = { '--dur': `${(clip.dur / clip.rate).toFixed(2)}s` } as React.CSSProperties
+  return <div className={`s-runner ${clip.cls}${go ? ' go' : ''}`} style={style} aria-hidden="true">
+    <Clip src={clip.src} loop={false} rate={clip.rate} onStart={() => setGo(true)} onEnded={() => window.dispatchEvent(new Event('bs-run-done'))} />
+  </div>
 }
 
 /* ---------- review notes (floating) ---------- */
