@@ -27,8 +27,8 @@ const D = {
   demo_tag: ['דוגמה', 'Sample'],
   skip: ['דלג', 'Skip'],
   // hero
-  hero_l1: ['תיכנסו.', 'Come in.'],
-  hero_l2: ['תבנו משהו.', 'Build something.'],
+  hero_l1: ['הדלת פתוחה.', 'Come in.'],
+  hero_l2: ['הלבנים מחכות.', 'Build something.'],
   hero_sub: ['ערכות חדשות, סגורות במפעל, מהאוסף של הבית.', 'New, factory-sealed sets from the house collection.'],
   hero_p: ['ערכות שעדיין על המדף בחנויות במחיר שמתחרה בהן, וערכות שפרשו מייצור, מתנות רכישה ונדירים שכבר לא תמצאו בשום חנות. איסוף מראש פינה או משלוח.', 'Sets still on store shelves at a price that competes with them, and retired sets, gifts with purchase and rarities you will not find in any shop. Pickup in Rosh Pina or delivery.'],
   hero_cta: ['לכל הערכות', 'All sets'],
@@ -68,7 +68,7 @@ const D = {
   promise_2: ['מחיר הוגן', 'Fair price'],
   promise_2_sub: ['ערכות בייצור במחיר שמתחרה בחנויות. ערכות שפרשו לפי השוק.', 'In-production sets priced against the stores. Retired sets priced by the market.'],
   promise_3: ['בן אדם בצד השני', 'A human on the other side'],
-  promise_3_sub: ['ההזמנה מגיעה אליי בוואטסאפ ואני עונה. גלעד.', 'The order lands on my WhatsApp and I answer. Gilad.'],
+  promise_3_sub: ['ההזמנה מגיעה אליי בוואטסאפ ואני עונה. גילעד.', 'The order lands on my WhatsApp and I answer. Gilad.'],
   see_all: ['לכל הערכות', 'See all sets'],
   // catalog
   sets_title: ['כל הערכות', 'All sets'],
