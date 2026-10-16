@@ -21,7 +21,7 @@ export const ZONES: Record<string, Zone> = {}
 export function zoneOf(code: string | null | undefined): Zone | undefined { if (!code) return; const z = Object.keys(ZONES).filter(k => code.startsWith(k)).sort((a, b) => b.length - a.length)[0]; return z ? ZONES[z] : undefined }
 export type Condition = 'sealed' | 'open' | 'built'
 export type Status = 'sale' | 'personal' | 'hold' | 'sold'
-export type Kind = 'set' | 'polybag' | 'gear' | 'parts' | 'other'
+export type Kind = 'set' | 'polybag' | 'gear' | 'book' | 'magazine' | 'parts' | 'other'
 
 export type InventoryRow = {
   id: string; kind: Kind; set_num: string | null; number: string | null; name: string | null; theme: string | null; subtheme: string | null
@@ -35,7 +35,7 @@ export const STATUS: Record<Status, { he: string; cls: string }> = {
   sale: { he: 'למכירה', cls: 't-green' }, personal: { he: 'אישי', cls: 't-blue' }, hold: { he: 'שמור ללקוח', cls: 't-yellow' }, sold: { he: 'נמכר', cls: 't-ink' },
 }
 export const CONDITION: Record<Condition, string> = { sealed: 'חדש סגור', open: 'פתוח', built: 'בנוי' }
-export const KIND: Record<Kind, string> = { set: 'סט', polybag: 'Polybag', gear: 'ציוד', parts: 'חלקים', other: 'אחר' }
+export const KIND: Record<Kind, string> = { set: 'סט', polybag: 'Polybag', gear: 'אביזר', book: 'ספר', magazine: 'עיתון', parts: 'חלקים', other: 'אחר' }
 const THEME_CLS: Record<string, string> = { 'Harry Potter': 't-red', 'Star Wars': 't-ink', Disney: 't-blue', Botanicals: 't-green', City: 't-yellow', 'The Lord of the Rings': 't-oak', Technic: 't-cocoa', Creator: 't-green', Ideas: 't-blue', Marvel: 't-red', Friends: 't-yellow', Icons: 't-oak', Ninjago: 't-green', Speed: 't-red', DOTS: 't-yellow', Architecture: 't-ink', Classic: 't-yellow', Duplo: 't-red' }
 export function themeCls(t: string | null) { return (t && THEME_CLS[t]) || 't-ink' }
 export function fmtPrice(x: number | null | undefined) { return x == null ? '' : '₪ ' + Math.round(x).toLocaleString('en-US') }
@@ -87,7 +87,31 @@ export async function shelfCount(code: string): Promise<number> {
   return (data || []).reduce((s, r) => s + (r.qty || 0), 0)
 }
 
-export type NewItem = { kind: Kind; set_num: string | null; custom_name: string | null; ean: string | null; location: string; qty: number; condition: Condition; status: Status; price: number | null; price_source: string | null; tags: string[]; notes: string | null }
+export type NewItem = { kind: Kind; set_num: string | null; custom_name: string | null; ean: string | null; location: string; qty: number; condition: Condition; status: Status; price: number | null; price_source: string | null; tags: string[]; notes: string | null; photo_url?: string | null }
+
+/* existing lines of a manual item, matched by barcode (set_num is null for those) */
+export async function stockOfEan(ean: string): Promise<StockLine[]> {
+  const { data } = await supabase.from('bs_items').select('id,location,qty,condition,status,price').is('set_num', null).eq('ean', ean).order('created_at')
+  return (data || []) as StockLine[]
+}
+
+/* shrink a phone photo to max 1400px (JPEG) before upload, then store it through the photo function */
+export async function uploadPhoto(file: File): Promise<string> {
+  const small = await shrink(file, 1400)
+  const fd = new FormData(); fd.append('file', small, 'item.jpg')
+  const { data, error } = await supabase.functions.invoke('photo', { body: fd })
+  if (error) throw new Error(error.message || 'העלאת התמונה נכשלה')
+  if (!data?.url) throw new Error(data?.error || 'העלאת התמונה נכשלה')
+  return data.url as string
+}
+async function shrink(file: File, max: number): Promise<Blob> {
+  const bmp = await createImageBitmap(file).catch(() => null)
+  if (!bmp) return file
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height))
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k)
+  c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height)
+  return await new Promise<Blob>(res => c.toBlob(b => res(b || file), 'image/jpeg', 0.86))
+}
 
 /* how a scan of a set that is already in stock is saved:
    mergeInto = add the quantity to that existing line (its shelf, its condition), forceNew = always open a new line,

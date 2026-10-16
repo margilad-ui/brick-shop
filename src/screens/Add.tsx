@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { addItem, CatalogSet, Condition, CONDITION, fmtPrice, Kind, Location, lookup, Lookup, NewItem, queueAdd, shelfCount, Status, STATUS, StockLine, stockOf, zoneOf } from '../lib/api'
+import { addItem, CatalogSet, Condition, CONDITION, fmtPrice, Kind, KIND, Location, lookup, Lookup, NewItem, queueAdd, shelfCount, Status, STATUS, StockLine, stockOf, stockOfEan, uploadPhoto, zoneOf } from '../lib/api'
 import { Empty, Loc, Pic, ThemeTag, toast } from '../components/Bits'
 import { Scanner } from '../components/Scanner'
 
@@ -16,7 +16,10 @@ export function Add({ locations }: { locations: Location[] }) {
   const [cond, setCond] = useState<Condition>('sealed')
   const [status, setStatus] = useState<Status>('sale')
   const [price, setPrice] = useState<string>('')
-  const [custom, setCustom] = useState({ name: '', kind: 'gear' as Kind })
+  const [custom, setCustom] = useState({ name: '', kind: 'gear' as Kind, notes: '' })
+  const [manual, setManual] = useState(false)               // the "item without a number" card, opened by hand
+  const [photo, setPhoto] = useState<{ file: File; url: string } | null>(null)
+  const photoRef = useRef<HTMLInputElement>(null)
   const [have, setHave] = useState<StockLine[]>([])
   const [recent, setRecent] = useState<Recent[]>(() => { try { return JSON.parse(localStorage.getItem('bs_recent') || '[]') } catch { return [] } })
   const inputRef = useRef<HTMLInputElement>(null)
@@ -29,14 +32,14 @@ export function Add({ locations }: { locations: Location[] }) {
     const r = await lookup(code)
     setRes(r); setBusy(false); setHave([])
     if ('found' in r && r.found) { setPrice(r.suggested.price != null ? String(r.suggested.price) : ''); stockOf(r.set.set_num).then(setHave) }
-    else setPrice('')
+    else { setPrice(''); if (code.length >= 12) stockOfEan(code).then(setHave) }
     setQty(1)
   }, [])
 
   function onInput(v: string) {
     const d = v.replace(/\D/g, '').slice(0, 13); setQ(d); setRes(null)
     window.clearTimeout(timer.current)
-    if (d.length === 5 || d.length === 7 || d.length >= 12) timer.current = window.setTimeout(() => doLookup(d), d.length >= 12 ? 0 : 500)
+    if (d.length === 5 || d.length === 6 || d.length === 7 || d.length >= 12) timer.current = window.setTimeout(() => doLookup(d), d.length >= 12 ? 0 : 500)
   }
   const onCode = useCallback((code: string) => { setScan(false); setQ(code); doLookup(code); if (navigator.vibrate) navigator.vibrate(60) }, [doLookup])
 
@@ -50,22 +53,24 @@ export function Add({ locations }: { locations: Location[] }) {
       location: loc, qty, condition: cond, status,
       price: price ? Number(price) : null,
       price_source: price && res && 'found' in res && res.found && Number(price) === res.suggested.price ? res.suggested.source : (price ? 'ידני' : null),
-      tags: [], notes: null,
+      tags: [], notes: set ? null : custom.notes.trim() || null,
     }
     if (!set && !n.custom_name) { toast('תן שם לפריט', true); return }
     setBusy(true)
     try {
+      // a manual item: the photo is uploaded only for a new line (adding to an existing line keeps that line's photo)
+      if (!set && photo && (mode === 'new' || mode === 'auto')) n.photo_url = await uploadPhoto(photo.file)
       const r = await addItem(n, mode === 'new' ? { forceNew: true } : mode === 'auto' ? {} : { mergeInto: mode })
       const where = r.location || loc
       toast(r.merged ? `עודכן. ${set?.name || n.custom_name} עכשיו ${r.qty} במדף ${where}` : `נוסף. ${qty} × ${set?.name || n.custom_name} במדף ${where}`)
       const rec: Recent[] = [{ number: set?.number || '', name: set?.name || n.custom_name || '', qty, loc: where }, ...recent].slice(0, 6)
       setRecent(rec); localStorage.setItem('bs_recent', JSON.stringify(rec))
       if (where === loc) setCount(c => (c ?? 0) + qty)
-      setQ(''); setRes(null); setQty(1); setPrice(''); setCustom({ name: '', kind: 'gear' })
+      setQ(''); setRes(null); setQty(1); setPrice(''); setCustom({ name: '', kind: 'gear', notes: '' }); setManual(false); setHave([]); if (photo) URL.revokeObjectURL(photo.url); setPhoto(null)
       inputRef.current?.focus()
     } catch (err) {
       const m = (err as Error).message || ''
-      if (/fetch|network|Failed/i.test(m)) { queueAdd(n); toast('אין רשת. נשמר בטלפון ויעלה כשתהיה.') }
+      if (/fetch|network|Failed/i.test(m) && !photo) { queueAdd(n); toast('אין רשת. נשמר בטלפון ויעלה כשתהיה.') }
       else toast('לא נשמר: ' + m, true)
     } finally { setBusy(false) }
   }
@@ -93,6 +98,7 @@ export function Add({ locations }: { locations: Location[] }) {
           <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z" /><circle cx="12" cy="13" r="3.5" /></svg>{scan ? 'סגור' : 'סרוק'}
         </button>
       </div>
+      {!manual && !res && !busy && <button type="button" className="manual-btn" onClick={() => { setRes(null); setHave(q.length >= 12 ? have : []); setManual(true); if (q.length >= 12) stockOfEan(q).then(setHave) }}>פריט ללא מספר (אביזר, ספר, עיתון)</button>}
 
       {scan && <Scanner onCode={onCode} onError={m => toast(m, true)} />}
 
@@ -100,16 +106,44 @@ export function Add({ locations }: { locations: Location[] }) {
 
       {res && 'error' in res && <div className="card"><Empty img="curious" title="שגיאה" text={res.error} /></div>}
 
-      {res && 'found' in res && !res.found && (
+      {((res && 'found' in res && !res.found) || manual) && (
         <div className="card">
-          <Empty img="curious" title={res.reason === 'barcode_unknown' ? 'הברקוד לא בקטלוג עדיין' : 'לא מצאתי סט עם המספר הזה'} text={res.reason === 'barcode_unknown' ? 'נסה להקליד את 5 הספרות מחזית הקופסה. או רשום כפריט ידני:' : 'בדוק את המספר, או רשום כפריט ידני:'} />
+          {res && 'found' in res && !res.found
+            ? <Empty img="curious" title={res.reason === 'barcode_unknown' ? 'הברקוד לא בקטלוג עדיין' : 'לא מצאתי סט עם המספר הזה'} text={res.reason === 'barcode_unknown' ? 'נסה להקליד את המספר מחזית הקופסה, או רשום כפריט ידני. הברקוד יישמר ובסריקה הבאה הפריט יזוהה.' : 'בדוק את המספר, או רשום כפריט ידני:'} />
+            : <div className="manual-head"><b>פריט ללא מספר</b><span className="muted">אביזר, ספר, עיתון, חלקים. אפשר לצלם, והתמונה תשמש בחנות.</span></div>}
           <div style={{ padding: '0 14px 14px', display: 'grid', gap: 10 }}>
+            <div className="photo-row">
+              <button type="button" className={'photo-btn' + (photo ? ' has' : '')} onClick={() => photoRef.current?.click()}>
+                {photo ? <img src={photo.url} alt="" /> : <><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z" /><circle cx="12" cy="13" r="3.5" /></svg><span>צלם</span></>}
+              </button>
+              <input ref={photoRef} type="file" accept="image/*" capture="environment" hidden onChange={e => { const f = e.target.files?.[0]; if (f) { if (photo) URL.revokeObjectURL(photo.url); setPhoto({ file: f, url: URL.createObjectURL(f) }) } e.target.value = '' }} />
+              <div className="field2" style={{ flex: 1 }}>
+                <div className="field"><label>שם הפריט</label><input value={custom.name} onChange={e => setCustom({ ...custom, name: e.target.value })} placeholder="מלחייה ופלפלייה" /></div>
+                <div className="field"><label>סוג</label><select value={custom.kind} onChange={e => setCustom({ ...custom, kind: e.target.value as Kind })}>{(['gear', 'book', 'magazine', 'polybag', 'parts', 'set', 'other'] as Kind[]).map(k => <option key={k} value={k}>{KIND[k]}</option>)}</select></div>
+              </div>
+            </div>
+            {photo && <button type="button" className="btn" style={{ justifySelf: 'start' }} onClick={() => { URL.revokeObjectURL(photo.url); setPhoto(null) }}>הסר תמונה</button>}
             <div className="field2">
-              <div className="field"><label>שם הפריט</label><input value={custom.name} onChange={e => setCustom({ ...custom, name: e.target.value })} placeholder="קלמר לגו אדום" /></div>
-              <div className="field"><label>סוג</label><select value={custom.kind} onChange={e => setCustom({ ...custom, kind: e.target.value as Kind })}><option value="gear">ציוד</option><option value="polybag">Polybag</option><option value="parts">חלקים</option><option value="set">סט</option><option value="other">אחר</option></select></div>
+              <div className="field"><label>ברקוד (אם יש)</label><input value={q.length >= 12 ? q : ''} onChange={e => onInput(e.target.value)} inputMode="numeric" placeholder="סרוק או הקלד" /></div>
+              <div className="field"><label>הערה</label><input value={custom.notes} onChange={e => setCustom({ ...custom, notes: e.target.value })} placeholder="מהדורה, מקור, מצב" /></div>
             </div>
             <Controls qty={qty} setQty={setQty} cond={cond} setCond={setCond} status={status} setStatus={setStatus} price={price} setPrice={setPrice} />
-            <button className="cta" type="button" disabled={busy} onClick={() => save(null)}>הוסף למדף {loc}</button>
+            {have.length > 0 ? (
+              <div className="dup" style={{ margin: '0 -14px -14px' }}>
+                <div className="dup-head"><b>כבר במלאי עם הברקוד הזה: {have.reduce((s, h) => s + h.qty, 0)}</b><span className="muted">להוסיף {qty} לשורה קיימת, או לפתוח שורה חדשה?</span></div>
+                {have.map(h => (
+                  <button key={h.id} type="button" className="dup-line" disabled={busy} onClick={() => save(null, h.id)}>
+                    <Loc code={h.location} small />
+                    <span className="dup-info">{h.qty} במלאי{h.condition !== 'sealed' ? ' · ' + CONDITION[h.condition] : ''}{h.status !== 'sale' ? ' · ' + STATUS[h.status].he : ''}{h.price != null ? ' · ' + fmtPrice(h.price) : ''}</span>
+                    <span className="dup-act">+{qty} → {h.qty + qty}</span>
+                  </button>
+                ))}
+                <button className="cta alt" type="button" disabled={busy} onClick={() => save(null, 'new')}>שורה חדשה במדף {loc}</button>
+              </div>
+            ) : (
+              <button className="cta" type="button" disabled={busy} onClick={() => save(null)}>{busy ? 'שומר...' : `הוסף למדף ${loc}`}</button>
+            )}
+            {manual && <button type="button" className="btn" onClick={() => { setManual(false); setHave([]) }}>ביטול</button>}
           </div>
         </div>
       )}
