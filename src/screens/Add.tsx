@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { addItem, CatalogSet, Condition, CONDITION, fmtPrice, Kind, Location, lookup, Lookup, NewItem, queueAdd, shelfCount, Status, STATUS, stockOf, zoneOf } from '../lib/api'
+import { addItem, CatalogSet, Condition, CONDITION, fmtPrice, Kind, Location, lookup, Lookup, NewItem, queueAdd, shelfCount, Status, STATUS, StockLine, stockOf, zoneOf } from '../lib/api'
 import { Empty, Loc, Pic, ThemeTag, toast } from '../components/Bits'
 import { Scanner } from '../components/Scanner'
 
@@ -17,7 +17,7 @@ export function Add({ locations }: { locations: Location[] }) {
   const [status, setStatus] = useState<Status>('sale')
   const [price, setPrice] = useState<string>('')
   const [custom, setCustom] = useState({ name: '', kind: 'gear' as Kind })
-  const [have, setHave] = useState<{ location: string | null; qty: number; condition: Condition; status: Status }[]>([])
+  const [have, setHave] = useState<StockLine[]>([])
   const [recent, setRecent] = useState<Recent[]>(() => { try { return JSON.parse(localStorage.getItem('bs_recent') || '[]') } catch { return [] } })
   const inputRef = useRef<HTMLInputElement>(null)
   const timer = useRef<number | undefined>(undefined)
@@ -40,7 +40,8 @@ export function Add({ locations }: { locations: Location[] }) {
   }
   const onCode = useCallback((code: string) => { setScan(false); setQ(code); doLookup(code); if (navigator.vibrate) navigator.vibrate(60) }, [doLookup])
 
-  async function save(set: CatalogSet | null) {
+  /* mode: 'auto' (old default), 'new' (a new line even if one exists), or the id of an existing line to add to */
+  async function save(set: CatalogSet | null, mode: 'auto' | 'new' | string = 'auto') {
     const n: NewItem = {
       kind: set ? (set.packaging === 'Polybag' ? 'polybag' : 'set') : custom.kind,
       set_num: set ? set.set_num : null,
@@ -54,11 +55,12 @@ export function Add({ locations }: { locations: Location[] }) {
     if (!set && !n.custom_name) { toast('תן שם לפריט', true); return }
     setBusy(true)
     try {
-      const r = await addItem(n)
-      toast(r.merged ? `עודכן. ${set?.name || n.custom_name} עכשיו ${r.qty} במדף ${loc}` : `נוסף. ${qty} × ${set?.name || n.custom_name} במדף ${loc}`)
-      const rec: Recent[] = [{ number: set?.number || '', name: set?.name || n.custom_name || '', qty, loc }, ...recent].slice(0, 6)
+      const r = await addItem(n, mode === 'new' ? { forceNew: true } : mode === 'auto' ? {} : { mergeInto: mode })
+      const where = r.location || loc
+      toast(r.merged ? `עודכן. ${set?.name || n.custom_name} עכשיו ${r.qty} במדף ${where}` : `נוסף. ${qty} × ${set?.name || n.custom_name} במדף ${where}`)
+      const rec: Recent[] = [{ number: set?.number || '', name: set?.name || n.custom_name || '', qty, loc: where }, ...recent].slice(0, 6)
       setRecent(rec); localStorage.setItem('bs_recent', JSON.stringify(rec))
-      setCount(c => (c ?? 0) + qty)
+      if (where === loc) setCount(c => (c ?? 0) + qty)
       setQ(''); setRes(null); setQty(1); setPrice(''); setCustom({ name: '', kind: 'gear' })
       inputRef.current?.focus()
     } catch (err) {
@@ -123,13 +125,7 @@ export function Add({ locations }: { locations: Location[] }) {
               <div className="tags"><ThemeTag theme={set.theme} />{retired ? <span className="tag t-red">פרש {set.exit_date?.slice(0, 4)}</span> : <span className="tag t-green">בייצור</span>}{set.rrp_us && <span className="tag t-ink">RRP ${set.rrp_us}</span>}</div>
             </div>
           </div>
-          {have.length > 0 && (
-            <div style={{ padding: '8px 14px', background: 'var(--yellow-soft)', fontSize: 13, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <b style={{ fontWeight: 500 }}>כבר במלאי: {have.reduce((s, h) => s + h.qty, 0)}</b>
-              {have.map((h, i) => <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Loc code={h.location} small />{h.qty}{h.condition !== 'sealed' ? ' · ' + CONDITION[h.condition] : ''}{h.status !== 'sale' ? ' · ' + STATUS[h.status].he : ''}</span>)}
-              <span className="muted">הוספה תגדיל את הכמות באותו מדף ומצב, או תפתח שורה חדשה</span>
-            </div>
-          )}
+
           <div className="price">
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}><span className="muted">₪</span><input value={price} onChange={e => setPrice(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" placeholder="לתמחר" aria-label="מחיר" /></div>
@@ -137,7 +133,21 @@ export function Add({ locations }: { locations: Location[] }) {
             </div>
           </div>
           <Controls qty={qty} setQty={setQty} cond={cond} setCond={setCond} status={status} setStatus={setStatus} />
-          <div style={{ padding: '0 14px 14px' }}><button className="cta" type="button" disabled={busy} onClick={() => save(set)}>הוסף למדף {loc}</button></div>
+          {have.length > 0 ? (
+            <div className="dup">
+              <div className="dup-head"><b>כבר במלאי: {have.reduce((s, h) => s + h.qty, 0)}</b><span className="muted">להוסיף {qty} לשורה קיימת, או לפתוח שורה חדשה?</span></div>
+              {have.map(h => (
+                <button key={h.id} type="button" className="dup-line" disabled={busy} onClick={() => save(set, h.id)}>
+                  <Loc code={h.location} small />
+                  <span className="dup-info">{h.qty} במלאי{h.condition !== 'sealed' ? ' · ' + CONDITION[h.condition] : ''}{h.status !== 'sale' ? ' · ' + STATUS[h.status].he : ''}{h.price != null ? ' · ' + fmtPrice(h.price) : ''}</span>
+                  <span className="dup-act">+{qty} → {h.qty + qty}</span>
+                </button>
+              ))}
+              <button className="cta alt" type="button" disabled={busy} onClick={() => save(set, 'new')}>שורה חדשה במדף {loc}</button>
+            </div>
+          ) : (
+            <div style={{ padding: '0 14px 14px' }}><button className="cta" type="button" disabled={busy} onClick={() => save(set)}>הוסף למדף {loc}</button></div>
+          )}
         </div>
       )}
 

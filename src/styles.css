@@ -58,6 +58,16 @@ img{max-width:100%}
 .cta{display:block;width:100%;border:0;border-radius:14px;background:var(--yellow);color:var(--ink);font-weight:700;font-size:16px;padding:14px;text-align:center}
 .cta:disabled{opacity:.5}
 .cta.dark{background:var(--ink);color:#fff}
+.cta.alt{background:var(--paper);border:2px dashed var(--line-2);color:var(--ink-2);font-weight:600}
+/* a scanned set that is already in stock: add to an existing line, or open a new one */
+.dup{margin:0 14px 14px;padding:12px;border-radius:14px;background:var(--yellow-soft);display:grid;gap:8px}
+.dup-head{display:flex;flex-direction:column;gap:2px;font-size:13px;padding:0 2px 4px}
+.dup-head b{font-weight:700;font-size:14px}
+.dup-line{display:flex;align-items:center;gap:10px;width:100%;border:0;border-radius:12px;background:var(--paper);padding:10px 12px;text-align:start;font:inherit;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.dup-line:active{transform:scale(.99)}
+.dup-line:disabled{opacity:.5}
+.dup-info{flex:1;font-size:13px;color:var(--ink-2)}
+.dup-act{font-weight:800;font-size:15px;background:var(--yellow);border-radius:999px;padding:6px 12px;white-space:nowrap;direction:ltr}
 
 /* layout */
 .shell{min-height:100vh;min-height:100dvh;display:grid;grid-template-rows:auto 1fr auto}

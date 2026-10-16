@@ -76,9 +76,10 @@ export async function loadInventory(): Promise<InventoryRow[]> {
   if (error) throw error
   return data as InventoryRow[]
 }
-export async function stockOf(set_num: string): Promise<{ location: string | null; qty: number; condition: Condition; status: Status }[]> {
-  const { data } = await supabase.from('bs_items').select('location,qty,condition,status').eq('set_num', set_num).neq('status', 'sold').gt('qty', 0)
-  return (data || []) as { location: string | null; qty: number; condition: Condition; status: Status }[]
+export type StockLine = { id: string; location: string | null; qty: number; condition: Condition; status: Status; price: number | null }
+export async function stockOf(set_num: string): Promise<StockLine[]> {
+  const { data } = await supabase.from('bs_items').select('id,location,qty,condition,status,price').eq('set_num', set_num).neq('status', 'sold').gt('qty', 0).order('created_at')
+  return (data || []) as StockLine[]
 }
 export async function shelfCount(code: string): Promise<number> {
   const { data, error } = await supabase.from('bs_items').select('qty').eq('location', code).neq('status', 'sold')
@@ -88,23 +89,30 @@ export async function shelfCount(code: string): Promise<number> {
 
 export type NewItem = { kind: Kind; set_num: string | null; custom_name: string | null; ean: string | null; location: string; qty: number; condition: Condition; status: Status; price: number | null; price_source: string | null; tags: string[]; notes: string | null }
 
-export async function addItem(n: NewItem) {
-  // merge into an existing line with the same set, location, condition and status
-  let existing = null as null | { id: string; qty: number }
-  if (n.set_num) {
+/* how a scan of a set that is already in stock is saved:
+   mergeInto = add the quantity to that existing line (its shelf, its condition), forceNew = always open a new line,
+   neither = the old default: merge when the same set sits on the same shelf in the same condition and status, otherwise a new line */
+export async function addItem(n: NewItem, opts: { mergeInto?: string; forceNew?: boolean } = {}) {
+  let existing = null as null | { id: string; qty: number; location?: string | null }
+  if (opts.mergeInto) {
+    const { data } = await supabase.from('bs_items').select('id,qty,location').eq('id', opts.mergeInto).maybeSingle()
+    if (!data) throw new Error('השורה הקיימת לא נמצאה')
+    existing = data
+  } else if (n.set_num && !opts.forceNew) {
     const { data } = await supabase.from('bs_items').select('id,qty').eq('set_num', n.set_num).eq('location', n.location).eq('condition', n.condition).eq('status', n.status).limit(1)
     existing = data?.[0] || null
   }
   if (existing) {
+    const target = existing.location ?? n.location
     const { error } = await supabase.from('bs_items').update({ qty: existing.qty + n.qty, price: n.price ?? undefined, price_source: n.price_source ?? undefined }).eq('id', existing.id)
     if (error) throw error
-    await supabase.from('bs_movements').insert({ item_id: existing.id, set_num: n.set_num, delta: n.qty, reason: 'add', to_location: n.location })
-    return { id: existing.id, merged: true, qty: existing.qty + n.qty }
+    await supabase.from('bs_movements').insert({ item_id: existing.id, set_num: n.set_num, delta: n.qty, reason: 'add', to_location: target })
+    return { id: existing.id, merged: true, qty: existing.qty + n.qty, location: target }
   }
   const { data, error } = await supabase.from('bs_items').insert(n).select('id').single()
   if (error) throw error
   await supabase.from('bs_movements').insert({ item_id: data.id, set_num: n.set_num, delta: n.qty, reason: 'add', to_location: n.location })
-  return { id: data.id as string, merged: false, qty: n.qty }
+  return { id: data.id as string, merged: false, qty: n.qty, location: n.location }
 }
 
 export async function updateItem(id: string, patch: Partial<NewItem> & { qty?: number }, movement?: { delta: number; reason: 'sold' | 'move' | 'adjust' | 'remove'; from?: string | null; to?: string | null; note?: string }) {
