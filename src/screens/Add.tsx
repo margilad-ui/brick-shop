@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { addItem, CatalogSet, Condition, CONDITION, fmtPrice, Kind, KIND, Location, lookup, Lookup, NewItem, queueAdd, shelfCount, Status, STATUS, StockLine, stockOf, stockOfEan, uploadPhoto, zoneOf } from '../lib/api'
+import { addItem, CatalogSet, Condition, CONDITION, fmtPrice, Kind, KIND, Location, lookup, Lookup, NewItem, queueAdd, shelfCount, Status, STATUS, StockLine, stockOf, stockOfEan, uploadPhoto, importPhotoUrl, zoneOf } from '../lib/api'
 import { Empty, Loc, Pic, ThemeTag, toast } from '../components/Bits'
 import { Scanner } from '../components/Scanner'
 
@@ -19,6 +19,7 @@ export function Add({ locations }: { locations: Location[] }) {
   const [custom, setCustom] = useState({ name: '', kind: 'gear' as Kind, notes: '' })
   const [manual, setManual] = useState(false)               // the "item without a number" card, opened by hand
   const [photo, setPhoto] = useState<{ file: File; url: string } | null>(null)
+  const [photoUrl, setPhotoUrl] = useState('')      // a picture from a shop page, pasted as a link
   const photoRef = useRef<HTMLInputElement>(null)
   const [have, setHave] = useState<StockLine[]>([])
   const [recent, setRecent] = useState<Recent[]>(() => { try { return JSON.parse(localStorage.getItem('bs_recent') || '[]') } catch { return [] } })
@@ -59,14 +60,17 @@ export function Add({ locations }: { locations: Location[] }) {
     setBusy(true)
     try {
       // a manual item: the photo is uploaded only for a new line (adding to an existing line keeps that line's photo)
-      if (!set && photo && (mode === 'new' || mode === 'auto')) n.photo_url = await uploadPhoto(photo.file)
+      if (!set && (mode === 'new' || mode === 'auto')) {
+        if (photo) n.photo_url = await uploadPhoto(photo.file)
+        else if (/^https:\/\//.test(photoUrl.trim())) n.photo_url = await importPhotoUrl(photoUrl.trim())
+      }
       const r = await addItem(n, mode === 'new' ? { forceNew: true } : mode === 'auto' ? {} : { mergeInto: mode })
       const where = r.location || loc
       toast(r.merged ? `עודכן. ${set?.name || n.custom_name} עכשיו ${r.qty} במדף ${where}` : `נוסף. ${qty} × ${set?.name || n.custom_name} במדף ${where}`)
       const rec: Recent[] = [{ number: set?.number || '', name: set?.name || n.custom_name || '', qty, loc: where }, ...recent].slice(0, 6)
       setRecent(rec); localStorage.setItem('bs_recent', JSON.stringify(rec))
       if (where === loc) setCount(c => (c ?? 0) + qty)
-      setQ(''); setRes(null); setQty(1); setPrice(''); setCustom({ name: '', kind: 'gear', notes: '' }); setManual(false); setHave([]); if (photo) URL.revokeObjectURL(photo.url); setPhoto(null)
+      setQ(''); setRes(null); setQty(1); setPrice(''); setCustom({ name: '', kind: 'gear', notes: '' }); setManual(false); setHave([]); if (photo) URL.revokeObjectURL(photo.url); setPhoto(null); setPhotoUrl('')
       inputRef.current?.focus()
     } catch (err) {
       const m = (err as Error).message || ''
@@ -114,15 +118,17 @@ export function Add({ locations }: { locations: Location[] }) {
           <div style={{ padding: '0 14px 14px', display: 'grid', gap: 10 }}>
             <div className="photo-row">
               <button type="button" className={'photo-btn' + (photo ? ' has' : '')} onClick={() => photoRef.current?.click()}>
-                {photo ? <img src={photo.url} alt="" /> : <><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z" /><circle cx="12" cy="13" r="3.5" /></svg><span>צלם</span></>}
+                {photo ? <img src={photo.url} alt="" /> : /^https:\/\//.test(photoUrl.trim()) ? <img src={photoUrl.trim()} alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} /> : <><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z" /><circle cx="12" cy="13" r="3.5" /></svg><span>צלם / בחר</span></>}
               </button>
-              <input ref={photoRef} type="file" accept="image/*" capture="environment" hidden onChange={e => { const f = e.target.files?.[0]; if (f) { if (photo) URL.revokeObjectURL(photo.url); setPhoto({ file: f, url: URL.createObjectURL(f) }) } e.target.value = '' }} />
+              <input ref={photoRef} type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; if (f) { if (photo) URL.revokeObjectURL(photo.url); setPhoto({ file: f, url: URL.createObjectURL(f) }) } e.target.value = '' }} />
               <div className="field2" style={{ flex: 1 }}>
                 <div className="field"><label>שם הפריט</label><input value={custom.name} onChange={e => setCustom({ ...custom, name: e.target.value })} placeholder="מלחייה ופלפלייה" /></div>
                 <div className="field"><label>סוג</label><select value={custom.kind} onChange={e => setCustom({ ...custom, kind: e.target.value as Kind })}>{(['gear', 'book', 'magazine', 'polybag', 'parts', 'set', 'other'] as Kind[]).map(k => <option key={k} value={k}>{KIND[k]}</option>)}</select></div>
               </div>
             </div>
-            {photo && <button type="button" className="btn" style={{ justifySelf: 'start' }} onClick={() => { URL.revokeObjectURL(photo.url); setPhoto(null) }}>הסר תמונה</button>}
+            {photo
+              ? <button type="button" className="btn" style={{ justifySelf: 'start' }} onClick={() => { URL.revokeObjectURL(photo.url); setPhoto(null) }}>הסר תמונה</button>
+              : <div className="field"><label>או קישור לתמונה מאתר (לחיצה ימנית על התמונה → העתק כתובת תמונה)</label><input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} inputMode="url" dir="ltr" placeholder="https://..." /></div>}
             <div className="field2">
               <div className="field"><label>ברקוד (אם יש)</label><input value={q.length >= 12 ? q : ''} onChange={e => onInput(e.target.value)} inputMode="numeric" placeholder="סרוק או הקלד" /></div>
               <div className="field"><label>הערה</label><input value={custom.notes} onChange={e => setCustom({ ...custom, notes: e.target.value })} placeholder="מהדורה, מקור, מצב" /></div>

@@ -104,6 +104,13 @@ export async function uploadPhoto(file: File): Promise<string> {
   if (!data?.url) throw new Error(data?.error || 'העלאת התמונה נכשלה')
   return data.url as string
 }
+/* a product picture from a shop page: the server copies it into our storage */
+export async function importPhotoUrl(url: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('photo', { body: { url } })
+  if (error) throw new Error(error.message || 'העתקת התמונה נכשלה')
+  if (!data?.url) throw new Error(data?.error || 'העתקת התמונה נכשלה')
+  return data.url as string
+}
 async function shrink(file: File, max: number): Promise<Blob> {
   const bmp = await createImageBitmap(file).catch(() => null)
   if (!bmp) return file
