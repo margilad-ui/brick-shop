@@ -17,10 +17,12 @@ export default function App() {
   const [zones, setZones] = useState<Zone[]>([])
   const [rows, setRows] = useState<InventoryRow[]>([])
   const [owner, setOwner] = useState<boolean | null>(null)
+  // after a recovery code was verified, the user is signed in but still has to choose a new password
+  const [newPw, setNewPw] = useState(() => sessionStorage.getItem('bs_newpw') === '1')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { setSession(s); if (sessionStorage.getItem('bs_newpw') === '1') setNewPw(true) })
     return () => sub.subscription.unsubscribe()
   }, [])
   useEffect(() => { location.hash = tab }, [tab])
@@ -40,6 +42,7 @@ export default function App() {
 
   if (session === undefined) return <div className="login"><div className="box"><Logo /><div className="muted" style={{ textAlign: 'center' }}>טוען...</div></div></div>
   if (!session) return <Login />
+  if (newPw) return <Login recovery onDone={() => { sessionStorage.removeItem('bs_newpw'); setNewPw(false) }} />
   if (owner === false) return <div className="login"><div className="box"><Logo /><img src={JOEY.curious} alt="" /><div style={{ textAlign: 'center' }}>המשתמש {session.user.email} מחובר, אבל אינו רשום כבעלים של BRICK Shop.</div><button className="btn" type="button" onClick={() => supabase.auth.signOut()}>יציאה</button></div></div>
 
   const tabs: { k: Tab; he: string; color: string }[] = [{ k: 'inventory', he: 'מלאי', color: '' }, { k: 'add', he: 'הוספה', color: 'red' }, { k: 'settings', he: 'הגדרות', color: 'ink' }]
