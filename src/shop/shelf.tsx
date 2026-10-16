@@ -5,9 +5,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { loadBoxArt, type BoxArt, type ShopItem } from './data'
 import { navigate, href } from './router'
+import { SB } from '../lib/supabase'
 
 export type ShelfBox = { item: ShopItem; art: BoxArt }
-const SHELF_IMG = 'https://fzznhlitvigvsxhkhvwf.supabase.co/storage/v1/object/public/bs-assets/shelf/keyed/shelf-a.png'
+const SHELF_IMG = SB.url + '/storage/v1/object/public/bs-assets/shelf/keyed/shelf-a.png'
 
 /* which sets go on the shelf: live inventory first, then demo; only sets with both renders and real dimensions */
 export function useShelf(items: ShopItem[], max = 8) {

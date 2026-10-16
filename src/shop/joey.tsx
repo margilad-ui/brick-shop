@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { SB } from '../lib/supabase'
 
 /* Joey assets. Small cut-outs ship with the app; hi-res stills and the green-screen clips live in Supabase Storage. */
 const base = import.meta.env.BASE_URL
-const STORE = 'https://fzznhlitvigvsxhkhvwf.supabase.co/storage/v1/object/public/bs-assets/joey/'
+const STORE = SB.url + '/storage/v1/object/public/bs-assets/joey/'
 export const JOEY = {
   sit: base + 'joey/sit.webp', side: base + 'joey/side.webp', head: base + 'joey/head.webp', fetch: base + 'joey/fetch.webp', oops: base + 'joey/oops.webp',
   nap: base + 'joey/nap.webp', peek: base + 'joey/peek.webp', happy: base + 'joey/happy.webp', curious: base + 'joey/curious.webp', guilty: base + 'joey/guilty.webp', sleepy: base + 'joey/sleepy.webp',

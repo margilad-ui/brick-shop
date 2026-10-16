@@ -1,5 +1,5 @@
 // BRICK Shop · assets function
-// Processes pending rows of bs_asset_jobs: copies each file from an allowed public URL (OpenArt CDN, GitHub, Brickset)
+// Processes pending rows of bs_asset_jobs: copies each file from an allowed public URL (OpenArt CDN, GitHub, Brickset, Supabase public storage)
 // into the public storage bucket "bs-assets". A job with content_type 'key' chroma-keys a green-screen PNG/JPG
 // into a transparent PNG; 'fit:<height>' makes a web-size copy of a PNG. Jobs are created only from SQL (owner side), so calling this function without a job
 // does nothing. Triggered from SQL via pg_net; no secrets involved.
@@ -9,7 +9,7 @@ import { Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ALLOWED = [/^https:\/\/cdn\.openart\.ai\//, /^https:\/\/raw\.githubusercontent\.com\//, /^https:\/\/images\.brickset\.com\//, /^https:\/\/fzznhlitvigvsxhkhvwf\.supabase\.co\/storage\/v1\/object\/public\//];
+const ALLOWED = [/^https:\/\/cdn\.openart\.ai\//, /^https:\/\/raw\.githubusercontent\.com\//, /^https:\/\/images\.brickset\.com\//, /^https:\/\/[a-z]+\.supabase\.co\/storage\/v1\/object\/public\//];
 const BUCKET = "bs-assets";
 
 const json = (body: unknown, status = 200) =>
