@@ -1,0 +1,8 @@
+# Netlify: customer shop + back office at the root path (GitHub Pages keeps /brick-shop/)
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  VITE_BASE = "/"
+  NODE_VERSION = "20"
