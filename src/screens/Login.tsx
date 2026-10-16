@@ -32,7 +32,7 @@ export function Login({ recovery = false, onDone }: { recovery?: boolean; onDone
         const { data, error } = await supabase.auth.signUp({ email, password: pw })
         if (error) throw error
         if (data.session) return
-        setMode('code'); setMsg('נשלח אליך מייל עם קוד בן 6 ספרות. הקלד אותו כאן.')
+        setMode('code'); setMsg('נשלח אליך מייל עם קוד. הקלד אותו כאן.')
       } else if (mode === 'code') {
         const { error } = await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'signup' })
         if (error) {
@@ -42,7 +42,7 @@ export function Login({ recovery = false, onDone }: { recovery?: boolean; onDone
       } else if (mode === 'reset') {
         const { error } = await supabase.auth.resetPasswordForEmail(email)
         if (error) throw error
-        setCode(''); setMode('resetcode'); setMsg('נשלח אליך מייל עם קוד בן 6 ספרות. הקלד אותו כאן ואז תבחר סיסמה חדשה.')
+        setCode(''); setMode('resetcode'); setMsg('נשלח אליך מייל עם קוד. הקלד אותו כאן ואז תבחר סיסמה חדשה.')
       } else if (mode === 'resetcode') {
         sessionStorage.setItem('bs_newpw', '1')
         const { error } = await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'recovery' })
@@ -74,7 +74,7 @@ export function Login({ recovery = false, onDone }: { recovery?: boolean; onDone
         {!configured && <div className="muted">חסרה הגדרת חיבור ל Supabase.</div>}
         {askEmail && <div className="field"><label htmlFor="email">אימייל</label><input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="username" required /></div>}
         {askPw && <div className="field"><label htmlFor="pw">{mode === 'newpw' ? 'סיסמה חדשה' : 'סיסמה'}</label><input id="pw" type="password" value={pw} onChange={e => setPw(e.target.value)} autoComplete={mode === 'in' ? 'current-password' : 'new-password'} minLength={8} required /></div>}
-        {askCode && <div className="field"><label htmlFor="code">קוד האימות מהמייל (6 ספרות)</label><input id="code" inputMode="numeric" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} autoComplete="one-time-code" required /></div>}
+        {askCode && <div className="field"><label htmlFor="code">קוד האימות מהמייל</label><input id="code" inputMode="numeric" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 10))} autoComplete="one-time-code" required /></div>}
         {msg && <div className="muted" style={{ color: 'var(--ink)' }}>{msg}</div>}
         <button className="cta" type="submit" disabled={busy}>{busy ? '...' : CTAS[mode]}</button>
         {mode === 'in' && <>
