@@ -1,12 +1,12 @@
 # BRICK Shop · מצב קיים
 
-**עודכן:** 16 באוקטובר 2026, 12:10. המספרים נכונים לרגע הכתיבה (נבדקו ב SQL).
+**עודכן:** 16 באוקטובר 2026, 14:00. המספרים נכונים לרגע הכתיבה (נבדקו ב SQL בפרויקט brick-shop).
 
 ## באוויר
 
-- **המשרד האחורי:** https://margilad-ui.github.io/brick-shop/ (PWA. בטלפון: כרום → תפריט → "הוסף למסך הבית")
-- **BRICK Shop ללקוחות:** https://margilad-ui.github.io/brick-shop/shop/ (`?nointro` מדלג על רגע הפתיחה, `?intro` מפעיל. כפתור EN לאנגלית. ה PWA שומר מטמון: אחרי פריסה חדשה, רענון אחד)
-- **כניסה למשרד האחורי:** mar.gilad@gmail.com, סיסמה שגילעד בחר בהרשמה (14.10). קלוד לא יודע אותה ולא צריך.
+- **המשרד האחורי:** https://margilad-ui.github.io/brick-shop/ (PWA. בטלפון: כרום → תפריט → "הוסף למסך הבית"). גם ב https://brick-house-shop.netlify.app/
+- **BRICK Shop ללקוחות:** https://margilad-ui.github.io/brick-shop/shop/ וגם https://brick-house-shop.netlify.app/shop/ (אותו קוד, אותו בסיס נתונים; ב Netlify קישורים עמוקים מחזירים 200) (`?nointro` מדלג על רגע הפתיחה, `?intro` מפעיל. כפתור EN לאנגלית. ה PWA שומר מטמון: אחרי פריסה חדשה, רענון אחד)
+- **כניסה למשרד האחורי:** mar.gilad@gmail.com, סיסמה שגילעד בחר בהרשמה בפרויקט החדש (16.10). קלוד לא יודע אותה ולא צריך. הטריגר `bs_auto_owner` הופך את המייל הזה לבעלים אוטומטית.
 - **מה בבסיס הנתונים:** קטלוג 8,448 סטים (2018 עד 2026, כולל ברקודים). 15 שורות מלאי (20 יחידות), הספירה בעיצומה. 30 מיקומים ב 5 אזורים. 15 תיאורים בעברית (לסטים שבמלאי, בקול של ג'ואי). 2 הזמנות: #1001 (status test, של קלוד) ו #1002 (status new, בדיקה של גילעד בוואטסאפ, 850 ש"ח). 157 עבודות נכסים.
 
 ## תשתית
@@ -14,8 +14,8 @@
 | רכיב | פרטים |
 |---|---|
 | קוד | GitHub `margilad-ui/brick-shop`, ענף `main`, ציבורי. אפליקציית Claude מותקנת על הריפו. ענף `assets` לפריימים של OpenArt (לא נפרס) |
-| אירוח | GitHub Pages, מקור "GitHub Actions". כל דחיפה ל main בונה ומעלה (כדקה). `404.html` זהה ל `index.html` |
-| בסיס נתונים | Supabase, ארגון "Gilad Zur" (Pro), פרויקט `tripaloo`, ref `fzznhlitvigvsxhkhvwf`, eu-central-1. מפתח ציבורי ב `.env.production` |
+| אירוח | שניים במקביל מאותו ריפו: GitHub Pages (base `/brick-shop/`, Actions, `404.html` fallback) ו **Netlify** (אתר `brick-house-shop`, צוות "Gilad" Pro, base `/`, `netlify.toml`, `_redirects`). כל push ל main בונה בשניהם (כדקה) |
+| בסיס נתונים | Supabase, ארגון "Gilad Zur" (Pro), פרויקט **`brick-shop`**, ref **`klhjjvjuwosrjkpclcmi`**, eu-central-1 (נפתח 16.10, 10$ לחודש). מפתח ציבורי `sb_publishable_VpTNfcZW…` ב `.env.production`. Auth: אימות מייל פעיל, תבנית "Confirm sign up" כוללת קוד 6 ספרות, Site URL = Pages |
 | טבלאות (ניהול) | `bs_owners`, `bs_catalog`, `bs_zones`, `bs_locations`, `bs_items`, `bs_movements`, `bs_settings`, `bs_secrets`, `bs_asset_jobs`, `bs_catalog_images`, `bs_orders`, view `bs_inventory`. RLS דרך `bs_is_owner()` |
 | שכבת החנות (ציבורית) | views `bs_shop`, `bs_shop_demo` (62 ערכות: 3 לסדרה + כל ערכה עם רנדר קופסה), `bs_shop_catalog`, `bs_shop_boxes` (front/back/prod מ Brickset), `bs_shop_box_art` (8 ערכות עם צד + זווית). פונקציות `bs_shop_config()`, `bs_place_order(jsonb)` |
 | הגדרות (bs_settings) | `shop_demo` true, `shop_whatsapp` 972525000553, `shop_bit_phone` 0525000553, `usd_ils` 3.1, `retired_multiplier` 1.2, `vat_included` true |
@@ -23,7 +23,7 @@
 | Storage (`bs-assets`, ציבורי) | `joey/keyed/{wave,run,wait,detective,present}.png` (שקופים, 2k), `joey/raw/*.png` (ירוקים), `joey/video/{run,run-lr,look,steal,jump,tumble,greet,peek,nap,sniff}.mp4` (ירוקים, 1080p; greet בהירו, peek בפוטר, nap בעגלה ריקה, sniff בכספת, run-lr ב Intro), `joey/video/wide-{run,run2,run-lr,look,fetch,jump}.mp4` (רחבים; הרץ משתמש ב run2, run-lr, look, fetch, jump; wide-run הוא ניסיון element2video שלא בשימוש), `shelf/raw|keyed/shelf-{a,b}.png` (מדף עץ מצויר; a בשימוש), `boxes/raw|keyed|web/<set_num>-{spine,angle}.png` (רנדרי קופסאות: 42238, 10344, 40699, 21319, 75280, 31203, 10278, 21322; ל 71044 רק spine), `brand/joey-ref-b.jpg` |
 | OpenArt | פרויקט "BRICK HOUSE" (`zPRuoHwP195hvbXeVTPx`). העלאות: joey-run, joey-wave, 9 פנים של קופסאות, 6 פריימים. סה"כ כ 5,000 קרדיטים נוצלו (ג'ואי: 5 תמונות, 15 סרטונים; קופסאות: 19 תמונות; מדף: 2). יתרה כ 110,000 |
 | תמונות ערכות | `bs_catalog_images`: 75 ערכות, 1,032 תמונות רשמיות. לערכה חדשה במלאי: `select bs_asset_import(set_num, brickset_id::text, 'brickset')` |
-| הערה | tripaloo משמש גם אפליקציה אחרת. ה RLS מבודד. מעבר לפרויקט נפרד: לפני לקוחות אמיתיים |
+| tripaloo (הישן) | `fzznhlitvigvsxhkhvwf`. הטבלאות `bs_*` וה bucket עדיין שם, לא נגעו ולא נמחקו (גיבוי). נוסף שם view `bs_mig_catalog` בלי הרשאות. למחוק הכל רק באישור גילעד, אחרי שבוע שקט |
 
 ## מה עובד (נבדק 15.10 ערב)
 
@@ -64,7 +64,8 @@
 - **נכס מ OpenArt:** `select bs_asset_import('<cdn url>', 'joey/video/x.mp4', 'video/mp4')`. לנקות ירוק: `bs_asset_import('<storage url>', 'joey/keyed/x.png', 'key')`. עותק ווב: `bs_asset_import('<keyed url>', 'boxes/web/x.png', 'fit:640')`. סטטוס: `select * from bs_asset_jobs order by id desc`. נתקע ב running: `update bs_asset_jobs set status='pending' where status='running'` ופינג (`net.http_post`, ראו 03).
 - **קופסה חדשה למדף (ערכה עם Box1/Box3 ב Brickset, או צילום פנים ישר):** 1) להעלות ל OpenArt: `openart_upload_import` עם כתובת images.brickset.com (או קובץ בענף assets). 2) שני הפרומפטים מ 06 ב `gpt-image-2-5-sunburst` image2image: זווית 4:3, צד 2:3, high, 2k, png, עם המידות מ `bs_catalog.dims`. 3) `bs_asset_import(cdn, 'boxes/raw/<set>-angle.png', 'image/png')` וכן spine. 4) key ל `boxes/keyed/`. 5) `fit:560` (זווית) ו `fit:640` (צד) ל `boxes/web/`. הערכה נכנסת למדף ולדמו לבד (views). לבדוק את הרנדר (מספר הערכה, טקסט). רנדר שנדחה על ידי מסנן בטיחות: לא לנסות שוב.
 - **קליפ רחב חדש של ג'ואי:** פריימים ירוקים 1920×1080 עם חיתוך ג'ואי בגובה 17% בקצה (ראו 06), ענף assets, `openart_upload_import`, `gemini-omni-1-1-flash` image2video עם startFrame ו endFrame, 1080p, 6 שניות. למדוד bbox בדפדפן ולכוון `--x0/--x1` ב shop.css.
-- **לשנות סכמה:** `execute_sql` על fzznhlitvigvsxhkhvwf, רק הוספות ו views. לעדכן את ההערה בסוף `supabase/migrations/0001_schema.sql`.
+- **לשנות סכמה:** `execute_sql` על `klhjjvjuwosrjkpclcmi`, רק הוספות ו views. לעדכן את `supabase/migrations/0002_brick_shop_full.sql` (המקור).
+- **פריסה:** push ל main. Pages: `gh run list -R margilad-ui/brick-shop --limit 1`. Netlify: `netlify-project-services-reader get-project` עם siteId `ed85c575-eb7d-46f7-b11e-ad8d39180d78`, או https://app.netlify.com/projects/brick-house-shop/deploys. גיבוי לגרירה ידנית: `VITE_BASE=/ npm run build` ואז `dist` לתיקייה `מלאי לגו\Netlify`.
 - **הזמנות:** `select * from bs_orders order by number desc`.
 - **מדבקות מדף:** `labels.html` + Playwright `page.pdf` (A4 landscape, printBackground). פונטים מ `@fontsource/montserrat` ו `@fontsource/heebo` (npm). לשנות מדפים: הרשימה `walls` בסקריפט.
 - **קבצים לגילעד:** `device_commit_files` לתיקייה `C:\Users\margi\OneDrive\Desktop\Letsgo Serious Play\מלאי לגו`. מסמכים: `00_Project_Docs` וגם `project_write` ל `claude/`. ג'ואי: `Joey`. מדבקות: `Labels`.

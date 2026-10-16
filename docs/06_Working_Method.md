@@ -1,6 +1,6 @@
 # BRICK Shop · שיטת העבודה של גילעד וקלוד
 
-**עודכן:** 15 באוקטובר 2026, 20:30. המסמך הזה נועד לשיחה חדשה: לקרוא אותו ולהתנהג כאילו היית כאן מההתחלה.
+**עודכן:** 16 באוקטובר 2026, 14:00. המסמך הזה נועד לשיחה חדשה: לקרוא אותו ולהתנהג כאילו היית כאן מההתחלה.
 
 ## מי זה גילעד, בהקשר הזה
 
@@ -24,11 +24,11 @@
 ## הנוהל הטכני (מה שעובד, לא לשנות בלי סיבה)
 
 - **ריפו:** `margilad-ui/brick-shop`. עריכה ב `/home/claude/brick-shop` (לשכפל אם הסשן חדש). קומיט עם הודעה קצרה באנגלית, שורות Co-Authored-By ו Claude-Session כמקובל.
-- **פריסה:** `git push` ל main. `gh run list -R margilad-ui/brick-shop --limit 1`. לפני push: `npm run build` ירוק (כולל tsc).
-- **בסיס נתונים:** `execute_sql` על `fzznhlitvigvsxhkhvwf`. רק הוספות (create if not exists, create or replace view, alter add column, create policy בשם חדש, insert on conflict, grant select על view). לא drop, לא revoke, לא טבלה חדשה עם מדיניות באותה קריאה (חסום), לא סודות. לעדכן את ההערה ב `supabase/migrations/0001_schema.sql`.
+- **פריסה:** `git push` ל main בונה גם ב Pages (`gh run list -R margilad-ui/brick-shop --limit 1`) וגם ב Netlify (brick-house-shop). לפני push: `npm run build` ירוק (כולל tsc).
+- **בסיס נתונים:** `execute_sql` על `klhjjvjuwosrjkpclcmi` (פרויקט brick-shop). רק הוספות (create if not exists, create or replace view, alter add column, create policy בשם חדש, insert on conflict, grant/revoke). לא drop (חסום), לא סודות. לעדכן את `supabase/migrations/0002_brick_shop_full.sql`. **ב tripaloo (`fzznhlitvigvsxhkhvwf`) לא נוגעים.**
 - **פונקציות:** `deploy_edge_function` עם הקובץ המלא (assets: verify_jwt=false).
 - **נכסים:** OpenArt → `bs_asset_import` → Storage. פרטים ב 04. כל קובץ שהסשן לא יכול להוריד עובר דרך GitHub או Supabase.
-- **בדיקות חיות:** הדפדפן המובנה של אפליקציית Claude (`Claude_Browser`: navigate, resize_window mobile/1400×900, F5, screenshot, zoom, javascript_tool). Claude in Chrome רק כשכרום של גילעד פתוח. הסשן עצמו לא מגיע ל github.io, supabase.co, brickset.com, cdn.openart.ai.
+- **בדיקות חיות:** הדפדפן המובנה של אפליקציית Claude (`Claude_Browser`: navigate, resize_window mobile/1400×900, F5, screenshot, zoom, javascript_tool). Claude in Chrome כשכרום של גילעד פתוח: לבדוק עם `list_connected_browsers`, ואם "not connected" לנסות שוב אחרי דקה (מתחבר באיחור). בכרום: דשבורדים של Supabase ו Netlify עם ההתחברות של גילעד. אישורים של כסף או הרשאות: לעצור ולשאול. הסשן עצמו לא מגיע ל github.io, supabase.co, brickset.com, cdn.openart.ai.
 - **סקירה מקומית:** `vite preview` + Playwright עם נתוני דמה. צילומי מחשב מדויקים, אבל ג'ואי מופיע כתמונה (הסרטונים מנותקים) ותמונות Brickset הן מקומות.
 - **לגילעד:** `SendUserFile` (תצוגה בצ'אט) ו `device_commit_files` לתיקיית הפרויקט. מסמכים גם `project_write`.
 - **מסמכים:** 00 עד 06. לעדכן תאריך "עודכן". להוסיף ל 02 (החלטות) ול 03 (תקלות) תוך כדי עבודה, ועדכון מלא בסוף היום.

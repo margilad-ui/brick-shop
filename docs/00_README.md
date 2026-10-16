@@ -1,6 +1,6 @@
 # BRICK Shop · קובץ הפרויקט
 
-**עודכן:** 15 באוקטובר 2026, 20:30
+**עודכן:** 16 באוקטובר 2026, 14:00
 **סטטוס:** אבן דרך 1 (ספירה) באוויר, גילעד סופר (15 שורות, 20 יחידות). אבן דרך 4 (BRICK Shop ללקוחות) באוויר אחרי שלושה סבבי סקירה, עם ג'ואי בסרטונים ומדף קופסאות אמיתיות. אבני דרך 2 ו 3 (ניהול להשלמה, מחירים) פתוחות. מדבקות המדפים הודפסו ל PDF (15.10 ערב).
 **בעלים:** גילעד. **בונה:** קלוד, מתוך הפרויקט "LEGO INVENTORY" ב claude.ai.
 
@@ -24,16 +24,18 @@
 
 ## איפה הדברים
 
-- **המשרד האחורי:** https://margilad-ui.github.io/brick-shop/ (PWA, כניסה באימייל וסיסמה)
-- **החנות ללקוחות (BRICK Shop):** https://margilad-ui.github.io/brick-shop/shop/ (`?nointro` מדלג על רגע הפתיחה, `?intro` מפעיל אותו, כפתור EN לאנגלית)
+- **המשרד האחורי:** https://margilad-ui.github.io/brick-shop/ (PWA, כניסה באימייל וסיסמה). העתק זהה: https://brick-house-shop.netlify.app/
+- **החנות ללקוחות (BRICK Shop):** https://margilad-ui.github.io/brick-shop/shop/ וגם https://brick-house-shop.netlify.app/shop/ (`?nointro` מדלג על רגע הפתיחה, `?intro` מפעיל אותו, כפתור EN לאנגלית)
 - **הקוד:** https://github.com/margilad-ui/brick-shop (ציבורי, אין בו סודות). ענף `main` נפרס אוטומטית. ענף `assets` מחזיק פריימים ששימשו כרפרנס ל OpenArt (לא נפרס).
-- **בסיס הנתונים:** Supabase, ארגון "Gilad Zur" (Pro), פרויקט `tripaloo` (ref `fzznhlitvigvsxhkhvwf`, eu-central-1), טבלאות ו views בקידומת `bs_`. Storage: bucket ציבורי `bs-assets`.
+- **בסיס הנתונים:** Supabase, ארגון "Gilad Zur" (Pro), פרויקט **`brick-shop`** (ref `klhjjvjuwosrjkpclcmi`, eu-central-1, מ 16.10), טבלאות ו views בקידומת `bs_`. Storage: bucket ציבורי `bs-assets`. הפרויקט הישן `tripaloo` עדיין מחזיק עותק (לא נמחק).
+- **Netlify:** צוות "Gilad", אתר `brick-house-shop`, מחובר לריפו (https://app.netlify.com/projects/brick-house-shop).
 - **OpenArt:** חשבון של גילעד, פרויקט "BRICK HOUSE" (id `zPRuoHwP195hvbXeVTPx`). כ 5,000 קרדיטים נוצלו סך הכל, היתרה כ 110,000.
 - **תיקיית הפרויקט במחשב של גילעד:** `C:\Users\margi\OneDrive\Desktop\Letsgo Serious Play\מלאי לגו`
   - `00_Project_Docs\` המסמכים האלה (00 עד 06)
   - `BRICK_SHOP_Mockups_v1.html`, `_v2.html`, `BRICK_SHOP_Admin_v3.html` ההדמיות מ 14.10 (ספרי סקירה)
   - `Joey\` נכסי ג'ואי: `cutouts\` 11 תנוחות חתוכות (webp שקוף), `Download_Joey_Assets.bat` ו `Download_Joey_Assets_2.bat` (הורדת הנכסים מ OpenArt, גילעד הריץ את שניהם), ובהמשך `boxes\` לרנדרים של קופסאות שגילעד מייצר בעצמו
-  - `Labels\BRICK_HOUSE_Shelf_Labels.pdf` מדבקות המדפים (A4 לרוחב, 2 עמודים)
+  - `Labels\BRICK_HOUSE_Shelf_Labels.pdf` מדבקות המדפים (A4 לרוחב, 2 עמודים), `Labels\BRICK_HOUSE_Cube_Labels.pdf` מדבקות הקוביות K1 עד K7
+  - `Netlify\brick-house-netlify\` (ו zip) בנייה לגרירה ידנית ל Netlify, גיבוי לחיבור GitHub
   - תמונות המדפים (WhatsApp Image 2026-10-14), לוחות המותג מ OpenArt (33.png, 55.png, gpt-image-2.5-sunburst-edit-*.png)
 - **פרויקט האם:** BRICK HOUSE, `C:\Users\margi\Downloads\PROJECTS\BRICK HOUSE\00_Project_Docs\` (קונספט, מותג, קניין רוחני). החנות היא "BRICK Shop" ממשפחת המותג.
 - **הדמיות מקוונות (claude.ai, פרטיות):** v1 `https://claude.ai/artifact/VtWz6ekqHzvbFyN5CLunnp`, v2 `https://claude.ai/artifact/MvxgNgQWRW5mpeXf5B1GYp`, v3 ניהול `https://claude.ai/artifact/SwpRNyBFgRHrSw7faSqZwD`
