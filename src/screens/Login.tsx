@@ -37,7 +37,11 @@ export function Login({ recovery = false, onDone }: { recovery?: boolean; onDone
         const { error } = await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'signup' })
         if (error) {
           const r = await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'email' })
-          if (r.error) throw error
+          if (r.error) {
+            sessionStorage.setItem('bs_newpw', '1')
+            const r2 = await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'recovery' })
+            if (r2.error) { sessionStorage.removeItem('bs_newpw'); throw error }
+          }
         }
       } else if (mode === 'reset') {
         const { error } = await supabase.auth.resetPasswordForEmail(email)
@@ -56,6 +60,7 @@ export function Login({ recovery = false, onDone }: { recovery?: boolean; onDone
     } catch (err) {
       const m = (err as Error).message
       setMsg(m === 'Invalid login credentials' ? 'אימייל או סיסמה לא נכונים'
+        : /rate limit/i.test(m) ? 'Supabase מגביל ל 2 מיילים בשעה. אם כבר קיבלת קוד, לחץ "כבר יש לי קוד". אחרת לחכות שעה.'
         : /expired|invalid/i.test(m) && (mode === 'code' || mode === 'resetcode') ? 'הקוד לא נכון או שפג תוקפו. אפשר לבקש קוד חדש.'
         : m)
     } finally { setBusy(false) }
@@ -84,6 +89,7 @@ export function Login({ recovery = false, onDone }: { recovery?: boolean; onDone
         </>}
         {mode !== 'in' && mode !== 'newpw' && <button type="button" className="btn" onClick={() => { setMsg(null); setMode('in') }}>חזרה לכניסה</button>}
         {mode === 'resetcode' && <button type="button" className="btn" onClick={() => { setMsg(null); setMode('reset') }}>שלח קוד חדש</button>}
+        {mode === 'reset' && <button type="button" className="btn" onClick={() => { setMsg('הקלד את הקוד שכבר קיבלת במייל.'); setCode(''); setMode('resetcode') }}>כבר יש לי קוד</button>}
       </form>
     </div>
   )
