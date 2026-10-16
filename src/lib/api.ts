@@ -15,7 +15,7 @@ export type Lookup =
 export type Location = { code: string; wall: string; shelf: number | null; label: string | null; color: string | null; sort: number; kind: string; active: boolean }
 export type Zone = { code: string; name: string; color: string; site: string | null; sort: number }
 export const ZONE_COLORS: Record<string, string> = { red: 'var(--red)', blue: 'var(--blue)', green: 'var(--green)', yellow: 'var(--yellow)', cocoa: 'var(--cocoa)', oak: 'var(--oak)', ink: 'var(--ink)', stone: 'var(--stone)' }
-export const LOC_KINDS: Record<string, string> = { shelf: 'מדף', box: 'קופסה', cabinet: 'ארון', drawer: 'מגירה', bin: 'תא', other: 'אחר' }
+export const LOC_KINDS: Record<string, string> = { shelf: 'מדף', cube: 'קובייה', box: 'קופסה', cabinet: 'ארון', drawer: 'מגירה', bin: 'תא', other: 'אחר' }
 /* zone registry, filled after load so the Loc pill can colour itself */
 export const ZONES: Record<string, Zone> = {}
 export function zoneOf(code: string | null | undefined): Zone | undefined { if (!code) return; const z = Object.keys(ZONES).filter(k => code.startsWith(k)).sort((a, b) => b.length - a.length)[0]; return z ? ZONES[z] : undefined }
