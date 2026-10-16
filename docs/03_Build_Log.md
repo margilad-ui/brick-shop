@@ -66,6 +66,7 @@ brick-shop/
 | העתקת הקטלוג: `pg_net` שולח את הבקשות רק בסיום הטרנזקציה | pg_net אסינכרוני | לשלוח בקריאה אחת, לבדוק בקריאה הבאה; לא `pg_sleep` באותה קריאה | |
 | שלושה פינגים במקביל לפונקציית assets עיבדו את אותן 10 עבודות | אין נעילה על pending | פינג אחד בכל פעם, 20 שניות ביניהם | upsert, אז לא נזק, רק זמן |
 | כיבוי "Confirm email" בדשבורד נחסם ("Security Weaken") | מסנן האבטחה | נשאר אימות: תבנית המייל קיבלה גם את הקוד `{{ .Token }}` (האפליקציה מצפה לקוד) | Site URL הוגדר ל Pages |
+| שחזור סיסמה: גילעד שכח את הסיסמה החדשה; המייל המובנה של Supabase מוגבל ל 2 בשעה; הקוד 8 ספרות ולא 6 | אין "שכחתי סיסמה", מגבלת מייל, אורך קוד | מסך "שכחתי סיסמה" (resetPasswordForEmail → verifyOtp recovery → updateUser), "כבר יש לי קוד", קבלת כל אורך קוד, SMTP דרך Resend (גילעד הדביק את המפתח בדשבורד) | `detectSessionInUrl` כבוי, לכן קודים ולא קישורים. דגל `bs_newpw` ב sessionStorage מחזיק את מסך הסיסמה החדשה |
 | הדפדפן: `file_upload` ל Netlify נדחה (רק קבצים שהסשן קיבל), `npx @netlify/mcp` ו `device_bash` חסומים ברשת | רשת ואבטחה | חיבור הריפו ב GitHub ל Netlify מהדשבורד. הבנייה ב Netlify | גרירה ידנית נשארת כגיבוי: `מלאי לגו\Netlify\brick-house-netlify` |
 | `apply_migration` חוזר "cancelled" | דורש אישור שלא מגיע | `execute_sql` עובד גם ל DDL | execute_sql לכל שינוי סכמה |
 | `drop`, `revoke`, `create table` עם `create policy` באותה קריאה: "cancelled" | פקודות הרסניות ו"Permission Grant" דורשות אישור | רק הוספות. מדיניות חדשה בשם חדש. במקום טבלה חדשה עם מדיניות: view על טבלה קיימת (כך נבנה bs_shop_box_art) | לתכנן "רק הוספה", ולהעדיף views |

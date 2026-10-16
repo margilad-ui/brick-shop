@@ -19,15 +19,16 @@
 | טבלאות (ניהול) | `bs_owners`, `bs_catalog`, `bs_zones`, `bs_locations`, `bs_items`, `bs_movements`, `bs_settings`, `bs_secrets`, `bs_asset_jobs`, `bs_catalog_images`, `bs_orders`, view `bs_inventory`. RLS דרך `bs_is_owner()` |
 | שכבת החנות (ציבורית) | views `bs_shop`, `bs_shop_demo` (62 ערכות: 3 לסדרה + כל ערכה עם רנדר קופסה), `bs_shop_catalog`, `bs_shop_boxes` (front/back/prod מ Brickset), `bs_shop_box_art` (8 ערכות עם צד + זווית). פונקציות `bs_shop_config()`, `bs_place_order(jsonb)` |
 | הגדרות (bs_settings) | `shop_demo` true, `shop_whatsapp` 972525000553, `shop_bit_phone` 0525000553, `usd_ils` 3.1, `retired_multiplier` 1.2, `vat_included` true |
-| פונקציות Edge | `catalog` (verify_jwt): lookup, sync, usage. `assets` (verify_jwt=false, גרסה 5): העתקה, `key`, `fit:<h>`, `brickset` |
+| פונקציות Edge | `catalog` (verify_jwt): lookup, sync, usage. `assets` (verify_jwt=false, גרסה 5): העתקה, `key`, `fit:<h>`, `brickset`. `photo` (verify_jwt, בעלים בלבד): העלאת צילום של פריט ידני ל `items/<uuid>.jpg` |
 | Storage (`bs-assets`, ציבורי) | `joey/keyed/{wave,run,wait,detective,present}.png` (שקופים, 2k), `joey/raw/*.png` (ירוקים), `joey/video/{run,run-lr,look,steal,jump,tumble,greet,peek,nap,sniff}.mp4` (ירוקים, 1080p; greet בהירו, peek בפוטר, nap בעגלה ריקה, sniff בכספת, run-lr ב Intro), `joey/video/wide-{run,run2,run-lr,look,fetch,jump}.mp4` (רחבים; הרץ משתמש ב run2, run-lr, look, fetch, jump; wide-run הוא ניסיון element2video שלא בשימוש), `shelf/raw|keyed/shelf-{a,b}.png` (מדף עץ מצויר; a בשימוש), `boxes/raw|keyed|web/<set_num>-{spine,angle}.png` (רנדרי קופסאות: 42238, 10344, 40699, 21319, 75280, 31203, 10278, 21322; ל 71044 רק spine), `brand/joey-ref-b.jpg` |
 | OpenArt | פרויקט "BRICK HOUSE" (`zPRuoHwP195hvbXeVTPx`). העלאות: joey-run, joey-wave, 9 פנים של קופסאות, 6 פריימים. סה"כ כ 5,000 קרדיטים נוצלו (ג'ואי: 5 תמונות, 15 סרטונים; קופסאות: 19 תמונות; מדף: 2). יתרה כ 110,000 |
 | תמונות ערכות | `bs_catalog_images`: 75 ערכות, 1,032 תמונות רשמיות. לערכה חדשה במלאי: `select bs_asset_import(set_num, brickset_id::text, 'brickset')` |
+| מייל | SMTP דרך Resend (`smtp.resend.com`, שולח `onboarding@resend.dev` בשם BRICK HOUSE, מגבלה 30 בשעה). בלי דומיין מאומת Resend שולח רק למייל של גילעד, מספיק למשרד האחורי. תבניות "Confirm sign up" ו "Reset password" כוללות קוד `{{ .Token }}` (הפרויקט שולח 8 ספרות) |
 | tripaloo (הישן) | `fzznhlitvigvsxhkhvwf`. הטבלאות `bs_*` וה bucket עדיין שם, לא נגעו ולא נמחקו (גיבוי). נוסף שם view `bs_mig_catalog` בלי הרשאות. למחוק הכל רק באישור גילעד, אחרי שבוע שקט |
 
 ## מה עובד (נבדק 15.10 ערב)
 
-**משרד אחורי:** כניסה, הוספה (5 ספרות → כרטיס → הוסף), רשימה וטבלה, מגירה, הגדרות, CSV. **סט שכבר במלאי (16.10):** הכרטיס מציג את השורות הקיימות עם "+N → סה"כ" לכל שורה (מוסיף לשורה הקיימת, גם במדף אחר, ורושם תנועה) וכפתור "שורה חדשה במדף X". `addItem(n, { mergeInto | forceNew })` ב api.ts.
+**משרד אחורי:** כניסה (כולל "שכחתי סיסמה" עם קוד במייל, 16.10), הוספה (5 עד 7 ספרות → כרטיס → הוסף), **פריט ללא מספר** עם צילום וברקוד (16.10), רשימה וטבלה, מגירה, הגדרות, CSV. **סט שכבר במלאי (16.10):** הכרטיס מציג את השורות הקיימות עם "+N → סה"כ" לכל שורה (מוסיף לשורה הקיימת, גם במדף אחר, ורושם תנועה) וכפתור "שורה חדשה במדף X". `addItem(n, { mergeInto | forceNew })` ב api.ts.
 
 **החנות:**
 - רגע פתיחה: דלתות צהובות, לוגו שנבנה מלבנים, ג'ואי רץ, הדלתות נפתחות (6.4 שניות, דילוג).

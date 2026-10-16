@@ -1,6 +1,6 @@
 -- BRICK Shop · complete schema for a fresh Supabase project (16.10.2026)
 -- Idempotent where Postgres allows it. Run once on a new project with execute_sql, then copy data, then deploy
--- the edge functions "catalog" and "assets". Replace __PROJECT_REF__ with the project ref before running.
+-- the edge functions "catalog", "assets" and "photo". Replace __PROJECT_REF__ with the project ref before running.
 create extension if not exists pg_trgm;
 create extension if not exists pgcrypto;
 create extension if not exists pg_net;
@@ -82,7 +82,7 @@ create policy "locations all owners" on public.bs_locations for all to authentic
 create table if not exists public.bs_items (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null default auth.uid() references auth.users(id),
-  kind text not null default 'set' check (kind in ('set','polybag','gear','parts','other')),
+  kind text not null default 'set' check (kind in ('set','polybag','gear','book','magazine','parts','other')),
   set_num text references public.bs_catalog(set_num),
   custom_name text,
   ean text,
@@ -212,7 +212,7 @@ end $$;
 create or replace view public.bs_inventory as
 select i.id, i.kind, i.set_num, coalesce(c.number, i.set_num) as number,
        coalesce(i.custom_name, c.name) as name, c.theme, c.subtheme, c.year, c.pieces, c.minifigs,
-       c.age_min, c.image_url, c.thumb_url, c.exit_date, c.availability, c.rrp_us, c.ean as catalog_ean,
+       c.age_min, coalesce(c.image_url, i.photo_url) as image_url, coalesce(c.thumb_url, i.photo_url) as thumb_url, c.exit_date, c.availability, c.rrp_us, c.ean as catalog_ean,
        (c.exit_date is not null and c.exit_date < current_date) as retired,
        i.location, l.wall, i.qty, i.condition, i.status, i.price, i.price_source, i.tags, i.notes,
        i.photo_url, i.ean, i.created_at, i.updated_at
@@ -222,7 +222,7 @@ left join public.bs_locations l on l.code = i.location;
 
 create or replace view public.bs_shop as
 select i.id, i.kind, i.set_num, c.number, coalesce(c.name, i.custom_name) as name, c.theme, c.subtheme, c.year, c.pieces, c.minifigs, c.age_min,
-       c.packaging, c.availability, c.launch_date, c.exit_date, c.rrp_us, c.rrp_de, c.image_url, c.thumb_url, c.dims, c.model_dims,
+       c.packaging, c.availability, c.launch_date, c.exit_date, c.rrp_us, c.rrp_de, coalesce(c.image_url, i.photo_url) as image_url, coalesce(c.thumb_url, i.photo_url) as thumb_url, c.dims, c.model_dims,
        c.rating, c.rating_count, c.instructions_count, c.additional_images, c.tags as catalog_tags, c.description_en, c.description_he,
        (c.exit_date is not null and c.exit_date <= current_date) or c.availability = 'Retired' as retired,
        i.qty, i.condition, i.price, i.tags, i.photo_url, i.created_at, i.updated_at, false as demo
