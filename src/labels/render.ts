@@ -137,7 +137,7 @@ async function fetchBrickLink(p: { part_no: string; color_id: number | null }): 
   return null
 }
 
-function photoToLines(img: ImageBitmap, size: number): HTMLCanvasElement {
+export function photoToLines(img: ImageBitmap, size: number): HTMLCanvasElement {
   const c = document.createElement('canvas'); c.width = size; c.height = size
   const g = c.getContext('2d')!
   g.fillStyle = '#fff'; g.fillRect(0, 0, size, size)
@@ -265,7 +265,7 @@ export async function renderLabel(p: PartLabel): Promise<{ canvas: HTMLCanvasEle
 
   // QR, bottom right, integer module size so every module is crisp
   const qr = qrcode(0, 'L'); qr.addData(partUrl(p)); qr.make()
-  const n = qr.getModuleCount(), m = Math.max(2, Math.floor(92 / (n + 2)))
+  const n = qr.getModuleCount(), m = Math.max(2, Math.floor(96 / (n + 2)))
   const qs = (n + 2) * m, qx = LABEL_W - 6 - qs, qy = LABEL_H - 6 - qs
   for (let r = 0; r < n; r++) for (let col = 0; col < n; col++) if (qr.isDark(r, col)) g.fillRect(qx + (col + 1) * m, qy + (r + 1) * m, m, m)
 
