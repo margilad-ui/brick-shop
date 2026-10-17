@@ -35,6 +35,16 @@ Deno.serve(async (req: Request) => {
   let bytes: Uint8Array; let type: string;
   if ((req.headers.get("content-type") || "").includes("application/json")) {
     const body = await req.json().catch(() => ({}));
+    // proxy: hand a BrickLink part picture back with CORS so the label maker can read its pixels (BrickLink only, nothing stored)
+    if (body.proxy) {
+      const purl = String(body.proxy);
+      if (!/^https:\/\/img\.bricklink\.com\/ItemImage\/[A-Z]{1,3}\/[\w/.-]+$/.test(purl)) return json({ error: "proxy: BrickLink images only" }, 400);
+      const pr = await fetch(purl, { headers: { "User-Agent": "Mozilla/5.0 (BRICK Shop)" } }).catch(() => null);
+      if (!pr || !pr.ok) return json({ error: `fetch failed (${pr?.status ?? "network"})` }, 404);
+      const pct = (pr.headers.get("content-type") || "image/png").split(";")[0];
+      if (!pct.startsWith("image/")) return json({ error: "not an image" }, 400);
+      return new Response(await pr.arrayBuffer(), { headers: { ...cors, "Content-Type": pct, "Cache-Control": "public, max-age=86400" } });
+    }
     const url = String(body.url || "");
     if (!/^https:\/\//.test(url)) return json({ error: "https url required" }, 400);
     const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (BRICK Shop)", Accept: "image/*" } }).catch(() => null);

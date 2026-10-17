@@ -42,7 +42,12 @@ export function Add({ locations }: { locations: Location[] }) {
     window.clearTimeout(timer.current)
     if (d.length === 5 || d.length === 6 || d.length === 7 || d.length >= 12) timer.current = window.setTimeout(() => doLookup(d), d.length >= 12 ? 0 : 500)
   }
-  const onCode = useCallback((code: string) => { setScan(false); setQ(code); doLookup(code); if (navigator.vibrate) navigator.vibrate(60) }, [doLookup])
+  const onCode = useCallback((code: string) => {
+    setScan(false); if (navigator.vibrate) navigator.vibrate(60)
+    const part = /[?&]p=([^&#\s]+)/.exec(code)   // a BRICK HOUSE part label
+    if (part) { window.dispatchEvent(new CustomEvent('bs:openpart', { detail: decodeURIComponent(part[1]) })); return }
+    setQ(code); doLookup(code)
+  }, [doLookup])
 
   /* mode: 'auto' (old default), 'new' (a new line even if one exists), or the id of an existing line to add to */
   async function save(set: CatalogSet | null, mode: 'auto' | 'new' | string = 'auto') {

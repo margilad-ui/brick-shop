@@ -29,6 +29,7 @@ export type InventoryRow = {
   exit_date: string | null; availability: string | null; rrp_us: number | null; catalog_ean: string | null; retired: boolean | null
   location: string | null; wall: string | null; qty: number; condition: Condition; status: Status; price: number | null; price_source: string | null
   tags: string[]; notes: string | null; photo_url: string | null; ean: string | null; created_at: string; updated_at: string
+  part_no: string | null; color_id: number | null; color_name: string | null; part_cat: string | null; bl_price: number | null
 }
 
 export const STATUS: Record<Status, { he: string; cls: string }> = {
@@ -166,4 +167,48 @@ export async function flushQueue(): Promise<number> {
   for (const n of q) { try { await addItem(n); done++ } catch { rest.push(n) } }
   localStorage.setItem(QKEY, JSON.stringify(rest))
   return done
+}
+
+/* ---------- parts (BrickLink format collection export: BrickMonkey, BrickLink, Rebrickable) ---------- */
+export type PartRow = { part_no: string; color_id: number | null; color_name: string; name: string; cat: string; qty: number; cond: string; bl_price: number | null; note: string }
+
+/** parse a CSV export in BrickLink column names (ITEMTYPE, ITEMID, COLOR, COLORNAME, ITEMNAME, PARTCATEGORYNAME, QTY, CONDITION, PRICE, DESCRIPTION) */
+export function parsePartsCsv(text: string): { rows: PartRow[]; skipped: number } {
+  const recs = csvRecords(text.replace(/^\uFEFF/, ''))
+  if (!recs.length) return { rows: [], skipped: 0 }
+  const head = recs[0].map(h => h.trim().toUpperCase())
+  const col = (...names: string[]) => names.map(n => head.indexOf(n)).find(i => i >= 0) ?? -1
+  const c = { type: col('ITEMTYPE'), id: col('ITEMID', 'PART', 'PART_NUM'), color: col('COLOR', 'COLOR_ID'), cname: col('COLORNAME'), name: col('ITEMNAME', 'NAME'), cat: col('PARTCATEGORYNAME', 'CATEGORY'), qty: col('QTY', 'QUANTITY'), cond: col('CONDITION'), price: col('PRICE'), desc: col('DESCRIPTION', 'REMARKS') }
+  if (c.id < 0 || c.qty < 0) throw new Error('הקובץ לא בפורמט של BrickLink (חסרות עמודות ITEMID ו QTY)')
+  const rows: PartRow[] = []; let skipped = 0
+  for (const r of recs.slice(1)) {
+    const get = (i: number) => (i >= 0 ? (r[i] || '').trim() : '')
+    const type = get(c.type).toUpperCase()
+    const id = get(c.id)
+    if (!id || (type && type !== 'P')) { if (id) skipped++; continue }
+    const colorId = get(c.color) === '' ? null : Number(get(c.color))
+    rows.push({ part_no: id, color_id: Number.isFinite(colorId as number) ? colorId : null, color_name: get(c.cname), name: get(c.name), cat: get(c.cat), qty: Math.max(0, Math.round(Number(get(c.qty)) || 0)), cond: get(c.cond).toUpperCase() || 'N', bl_price: get(c.price) ? Number(get(c.price)) : null, note: get(c.desc) })
+  }
+  // the same part and colour twice in one file: add the quantities
+  const m = new Map<string, PartRow>()
+  for (const r of rows) { const k = r.part_no + '|' + (r.color_id ?? -1); const x = m.get(k); if (x) x.qty += r.qty; else m.set(k, { ...r }) }
+  return { rows: [...m.values()], skipped }
+}
+function csvRecords(text: string): string[][] {
+  const out: string[][] = []; let row: string[] = [], f = '', q = false
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++ } else q = false } else f += ch }
+    else if (ch === '"') q = true
+    else if (ch === ',') { row.push(f); f = '' }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(f); f = ''; if (row.some(x => x !== '')) out.push(row); row = [] }
+    else f += ch
+  }
+  row.push(f); if (row.some(x => x !== '')) out.push(row)
+  return out
+}
+export async function importParts(rows: PartRow[], location: string | null, status: Status = 'personal') {
+  const { data, error } = await supabase.rpc('bs_import_parts', { p_rows: rows, p_location: location, p_status: status })
+  if (error) throw new Error(error.message)
+  return data as { inserted: number; updated: number; unchanged: number; ids: string[] }
 }

@@ -12,7 +12,11 @@ type Tab = 'inventory' | 'add' | 'settings'
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
-  const [tab, setTab] = useState<Tab>(() => { const h = location.hash.replace('#', ''); return (['inventory', 'add', 'settings'].includes(h) ? h : 'add') as Tab })
+  // ?p=3001.11 comes from the QR on a part label: open that part
+  const [openPart, setOpenPart] = useState<string | null>(() => new URLSearchParams(location.search).get('p'))
+  const [tab, setTab] = useState<Tab>(() => { if (new URLSearchParams(location.search).get('p')) return 'inventory'; const h = location.hash.replace('#', ''); return (['inventory', 'add', 'settings'].includes(h) ? h : 'add') as Tab })
+  const partOpened = useCallback(() => { setOpenPart(null); const u = new URL(location.href); u.searchParams.delete('p'); history.replaceState(null, '', u.pathname + u.search + u.hash) }, [])
+  useEffect(() => { const f = (e: Event) => { setOpenPart((e as CustomEvent<string>).detail); setTab('inventory') }; window.addEventListener('bs:openpart', f); return () => window.removeEventListener('bs:openpart', f) }, [])
   const [locations, setLocations] = useState<Location[]>([])
   const [zones, setZones] = useState<Zone[]>([])
   const [rows, setRows] = useState<InventoryRow[]>([])
@@ -57,7 +61,7 @@ export default function App() {
       <div style={{ minWidth: 0 }}>
         <header className="bar"><Logo short /><div className="me"><span>{tabs.find(t => t.k === tab)?.he}</span><img src={JOEY.head} alt="" /></div></header>
         {tab === 'add' && <Add locations={locations} />}
-        {tab === 'inventory' && <Inventory rows={rows} locations={locations} zones={zones} reload={reload} />}
+        {tab === 'inventory' && <Inventory rows={rows} locations={locations} zones={zones} reload={reload} openPart={openPart} onOpened={partOpened} />}
         {tab === 'settings' && <Settings rows={rows} locations={locations} zones={zones} email={session.user.email || ''} reload={reload} />}
       </div>
       <Toaster />

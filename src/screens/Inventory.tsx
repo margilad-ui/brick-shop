@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CONDITION, Condition, deleteItem, fmtPrice, InventoryRow, Location, Status, STATUS, updateItem, Zone } from '../lib/api'
 import { Empty, Loc, Pic, ThemeTag, toast, useMedia } from '../components/Bits'
+import { Labels, type PartLabel } from '../labels'
+
+const partLabel = (r: InventoryRow): PartLabel => ({ id: r.id, part_no: r.part_no || r.number || '', color_id: r.color_id, color_name: r.color_name, name: r.name })
+export const partKeyOf = (r: { part_no: string | null; color_id: number | null }) => `${r.part_no}.${r.color_id ?? 0}`
 
 type Filters = { q: string; status: 'all' | Status; prod: 'all' | 'retired' | 'active'; stock: 'all' | 'in' | 'zero' | 'many'; themes: string[]; walls: string[]; tags: string[]; quick: 'all' | 'retired' | 'zero' | 'noprice' | 'week' }
 const F0: Filters = { q: '', status: 'all', prod: 'all', stock: 'all', themes: [], walls: [], tags: [], quick: 'all' }
 type SortKey = 'number' | 'theme' | 'name' | 'location' | 'qty' | 'price' | 'status' | 'retired' | 'updated_at'
 
 function passes(p: InventoryRow, F: Filters) {
-  if (F.q) { const t = F.q.toLowerCase(); if (!`${p.name || ''} ${p.number || ''} ${p.theme || ''} ${p.location || ''} ${p.ean || ''} ${p.catalog_ean || ''} ${p.notes || ''}`.toLowerCase().includes(t)) return false }
+  if (F.q) { const t = F.q.toLowerCase(); if (!`${p.name || ''} ${p.number || ''} ${p.theme || ''} ${p.location || ''} ${p.ean || ''} ${p.catalog_ean || ''} ${p.notes || ''} ${p.part_no || ''} ${p.color_name || ''} ${p.part_cat || ''}`.toLowerCase().includes(t)) return false }
   if (F.status !== 'all' && p.status !== F.status) return false
   if (F.prod === 'retired' && !p.retired) return false
   if (F.prod === 'active' && p.retired) return false
@@ -24,8 +28,20 @@ function passes(p: InventoryRow, F: Filters) {
   return true
 }
 
-export function Inventory({ rows, locations, zones, reload }: { rows: InventoryRow[]; locations: Location[]; zones: Zone[]; reload: () => void }) {
+export function Inventory({ rows: allRows, locations, zones, reload, openPart, onOpened }: { rows: InventoryRow[]; locations: Location[]; zones: Zone[]; reload: () => void; openPart?: string | null; onOpened?: () => void }) {
   const desktop = useMedia('(min-width: 900px)')
+  const [mode, setMode] = useState<'items' | 'parts'>(() => (openPart || localStorage.getItem('bs_invmode') === 'parts') ? 'parts' : 'items')
+  const [labels, setLabels] = useState<PartLabel[] | null>(null)
+  useEffect(() => { localStorage.setItem('bs_invmode', mode) }, [mode])
+  const partsCount = useMemo(() => allRows.filter(r => r.kind === 'parts').length, [allRows])
+  const rows = useMemo(() => allRows.filter(r => (mode === 'parts') === (r.kind === 'parts')), [allRows, mode])
+  // a scanned label (?p=3001.11) opens that part
+  useEffect(() => {
+    if (!openPart || !allRows.length) return
+    const hit = allRows.find(r => r.kind === 'parts' && partKeyOf(r) === openPart)
+    if (hit) { setMode('parts'); setSel(hit) } else toast('החלק מהתווית לא נמצא במלאי', true)
+    onOpened?.()
+  }, [openPart, allRows]) // eslint-disable-line react-hooks/exhaustive-deps
   const [F, setF] = useState<Filters>(F0)
   const [sheet, setSheet] = useState(false)
   const [sel, setSel] = useState<InventoryRow | null>(null)
@@ -62,6 +78,8 @@ export function Inventory({ rows, locations, zones, reload }: { rows: InventoryR
 
   return (
     <div className="page">
+      {(partsCount > 0 || mode === 'parts') && <div className="seg"><button type="button" className={mode === 'items' ? 'on' : ''} onClick={() => { setMode('items'); setF(F0) }}>סטים ופריטים</button><button type="button" className={mode === 'parts' ? 'on' : ''} onClick={() => { setMode('parts'); setF(F0) }}>חלקים <span className="cnt">{partsCount}</span></button></div>}
+      {mode === 'parts' ? <PartsView rows={rows} q={F.q} setQ={q => setF({ ...F, q })} list={list} onPick={setSel} onLabels={l => setLabels(l.map(partLabel))} /> : <>
       <div className="kp">
         <div><small>פריטים במלאי</small><b>{kpi.units}</b></div>
         <div><small>דגמים</small><b>{kpi.models}</b></div>
@@ -123,7 +141,8 @@ export function Inventory({ rows, locations, zones, reload }: { rows: InventoryR
         </div>
       )}
 
-      {sheet && !desktop && (
+      </>}
+      {sheet && !desktop && mode === 'items' && (
         <div className="overlay" onClick={e => { if (e.target === e.currentTarget) setSheet(false) }}>
           <div className="pane">
             <div className="grab" />
@@ -134,12 +153,14 @@ export function Inventory({ rows, locations, zones, reload }: { rows: InventoryR
         </div>
       )}
 
-      {sel && <ItemDrawer item={sel} locations={locations} onClose={() => setSel(null)} onChanged={() => { setSel(null); reload() }} />}
+      {sel && <ItemDrawer item={sel} locations={locations} onClose={() => setSel(null)} onChanged={() => { setSel(null); reload() }} onLabel={() => setLabels([partLabel(sel)])} />}
+      {labels && <Labels parts={labels} onClose={() => setLabels(null)} />}
     </div>
   )
 }
 
-function ItemDrawer({ item, locations, onClose, onChanged }: { item: InventoryRow; locations: Location[]; onClose: () => void; onChanged: () => void }) {
+function ItemDrawer({ item, locations, onClose, onChanged, onLabel }: { item: InventoryRow; locations: Location[]; onClose: () => void; onChanged: () => void; onLabel: () => void }) {
+  const isPart = item.kind === 'parts'
   const [f, setF] = useState({ location: item.location || '', qty: item.qty, condition: item.condition, status: item.status, price: item.price != null ? String(item.price) : '', tags: (item.tags || []).join(', '), notes: item.notes || '', custom_name: item.set_num ? '' : item.name || '' })
   const [busy, setBusy] = useState(false)
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
@@ -169,15 +190,16 @@ function ItemDrawer({ item, locations, onClose, onChanged }: { item: InventoryRo
     <div className="overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="pane">
         <div className="grab" />
-        <h4><span className="ltr num">{item.set_num || item.kind}</span><button type="button" onClick={onClose}>סגור</button></h4>
+        <h4><span className="ltr num">{item.set_num || item.part_no || item.kind}</span><button type="button" onClick={onClose}>סגור</button></h4>
         <div className="dhero">
           <div className="pic"><Pic src={item.image_url} fallback={item.number || ''} /></div>
           <div>
             <h4>{item.name}</h4>
-            <div className="f">{[item.theme, item.year, item.pieces && `${item.pieces.toLocaleString('en-US')} חלקים`, item.minifigs != null && `${item.minifigs} מיניפיגורות`].filter(Boolean).join(' · ')}</div>
+            <div className="f">{isPart ? [item.color_name, item.part_cat, item.part_no].filter(Boolean).join(' · ') : [item.theme, item.year, item.pieces && `${item.pieces.toLocaleString('en-US')} חלקים`, item.minifigs != null && `${item.minifigs} מיניפיגורות`].filter(Boolean).join(' · ')}</div>
             <div className="chips" style={{ marginTop: 8 }}>{item.retired ? <span className="tag t-red">פרש {item.exit_date?.slice(0, 4)}</span> : item.set_num && <span className="tag t-green">בייצור</span>}<ThemeTag theme={item.theme} /></div>
           </div>
         </div>
+        {isPart && <div className="qbig"><button type="button" onClick={() => setF({ ...f, qty: Math.max(0, f.qty - 1) })}>−</button><b>{f.qty}</b><button type="button" onClick={() => setF({ ...f, qty: f.qty + 1 })}>+</button><small>יחידות</small></div>}
         {!item.set_num && <div className="field"><label>שם הפריט</label><input value={f.custom_name} onChange={e => setF({ ...f, custom_name: e.target.value })} /></div>}
         <div className="field2">
           <div className="field"><label>מיקום</label><select value={f.location} onChange={e => setF({ ...f, location: e.target.value })}><option value="">ללא</option>{locations.map(l => <option key={l.code} value={l.code}>{l.code} · {l.label}</option>)}</select></div>
@@ -192,21 +214,60 @@ function ItemDrawer({ item, locations, onClose, onChanged }: { item: InventoryRo
           <div className="field"><label>תגיות (מופרדות בפסיק)</label><input value={f.tags} onChange={e => setF({ ...f, tags: e.target.value })} placeholder="מתנה, אספנים" /></div>
         </div>
         <div className="field"><label>הערות</label><textarea rows={2} value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} placeholder="מדבקה, פגם באריזה, לקוח שמחכה..." /></div>
-        <div className="specs">
+        {isPart ? <div className="specs">
+          <div className="spec"><span>מספר חלק</span><b>{item.part_no}</b></div>
+          <div className="spec"><span>צבע</span><b>{item.color_name || '—'}</b></div>
+          <div className="spec"><span>שווי BrickLink ליחידה</span><b>{item.bl_price != null ? `$${item.bl_price}` : '—'}</b></div>
+          <div className="spec"><span>סה"כ לפי BrickLink</span><b>{item.bl_price != null ? `$${(item.bl_price * item.qty).toFixed(2)}` : '—'}</b></div>
+        </div> : <div className="specs">
           <div className="spec"><span>מחיר מחירון</span><b>{item.rrp_us ? `$${item.rrp_us}` : '—'}</b></div>
           <div className="spec"><span>ברקוד</span><b>{item.catalog_ean || item.ean || '—'}</b></div>
           <div className="spec"><span>מקור המחיר</span><b style={{ fontFamily: 'var(--heb)', direction: 'rtl' }}>{item.price_source || '—'}</b></div>
           <div className="spec"><span>עודכן</span><b>{new Date(item.updated_at).toLocaleDateString('he-IL')}</b></div>
-        </div>
+        </div>}
         <div className="dacts">
           <button type="button" className="btn primary" disabled={busy} onClick={save}>שמור</button>
-          <button type="button" className="btn dark" disabled={busy || item.qty < 1} onClick={sold}>נמכר אחד</button>
+          {isPart ? <button type="button" className="btn dark" onClick={onLabel}>תווית</button> : <button type="button" className="btn dark" disabled={busy || item.qty < 1} onClick={sold}>נמכר אחד</button>}
           {item.set_num && <a className="btn" href={`https://brickset.com/sets/${item.set_num}`} target="_blank" rel="noreferrer">Brickset</a>}
+          {isPart && <a className="btn" href={`https://www.bricklink.com/v2/catalog/catalogitem.page?P=${encodeURIComponent(item.part_no || '')}${item.color_id ? `#T=C&C=${item.color_id}` : ''}`} target="_blank" rel="noreferrer">BrickLink</a>}
           {!confirm ? <button type="button" className="btn danger" onClick={() => setConfirm(true)}>מחק</button> : <button type="button" className="btn danger" disabled={busy} onClick={remove}>בטוח? מחק</button>}
         </div>
       </div>
     </div>
   )
+}
+
+/* ---------- parts tab ---------- */
+function PartsView({ rows, q, setQ, list, onPick, onLabels }: { rows: InventoryRow[]; q: string; setQ: (q: string) => void; list: InventoryRow[]; onPick: (r: InventoryRow) => void; onLabels: (l: InventoryRow[]) => void }) {
+  const units = rows.reduce((s, r) => s + r.qty, 0)
+  const colors = new Set(rows.map(r => r.color_name).filter(Boolean)).size
+  const worth = rows.reduce((s, r) => s + (r.bl_price || 0) * r.qty, 0)
+  return <>
+    <div className="kp">
+      <div><small>סוגי חלקים</small><b>{rows.length}</b></div>
+      <div><small>יחידות</small><b>{units.toLocaleString('en-US')}</b></div>
+      <div><small>צבעים</small><b>{colors}</b></div>
+      <div><small>שווי BrickLink</small><b>${Math.round(worth).toLocaleString('en-US')}</b></div>
+    </div>
+    <div className="srow">
+      <label className="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg><input value={q} onChange={e => setQ(e.target.value)} placeholder="שם, מספר חלק, צבע, קטגוריה" aria-label="חיפוש חלקים" /></label>
+      <button type="button" className="btn" disabled={!list.length} onClick={() => onLabels(list)}>תוויות ({list.length})</button>
+    </div>
+    {list.length === 0 ? <div className="card"><Empty title={rows.length ? 'אין חלק כזה' : 'עוד אין חלקים'} text={rows.length ? 'נסה חיפוש אחר' : 'הגדרות → ייבוא חלקים'} /></div> : (
+      <div className="rows">
+        {list.map(p => (
+          <button type="button" className="row part" key={p.id} onClick={() => onPick(p)}>
+            <div className="pic"><Pic src={p.image_url} fallback={p.part_no || ''} /></div>
+            <div style={{ minWidth: 0 }}>
+              <div className="n">{p.name}</div>
+              <div className="m"><span className="setno">{p.part_no}</span>{p.color_name && p.color_name !== 'Not Selected' && <span className="tag">{p.color_name}</span>}{p.location && <Loc code={p.location} small />}</div>
+            </div>
+            <div className="qc"><b className={p.qty ? '' : 'zero'}>{p.qty.toLocaleString('en-US')}</b><small>יחידות</small></div>
+          </button>
+        ))}
+      </div>
+    )}
+  </>
 }
 
 function exportCsv(list: InventoryRow[]) {

@@ -91,7 +91,7 @@ export function Scanner({ onCode, onError }: { onCode: (code: string) => void; o
 
         // 3. decode: the browser's own detector when it exists (Android Chrome), ZXing otherwise
         if (window.BarcodeDetector) {
-          const det = new window.BarcodeDetector({ formats: ['ean_13', 'upc_a', 'ean_8', 'code_128', 'upc_e'] })
+          const det = new window.BarcodeDetector({ formats: ['ean_13', 'upc_a', 'ean_8', 'code_128', 'upc_e', 'qr_code'] })
           let last = 0
           const loop = async (ts: number) => {
             if (stoppedRef.current) return
@@ -104,7 +104,7 @@ export function Scanner({ onCode, onError }: { onCode: (code: string) => void; o
           raf = requestAnimationFrame(loop)
         } else {
           const hints = new Map()
-          hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13, BarcodeFormat.UPC_A, BarcodeFormat.EAN_8, BarcodeFormat.CODE_128, BarcodeFormat.UPC_E])
+          hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13, BarcodeFormat.UPC_A, BarcodeFormat.EAN_8, BarcodeFormat.CODE_128, BarcodeFormat.UPC_E, BarcodeFormat.QR_CODE])
           hints.set(DecodeHintType.TRY_HARDER, true)
           const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 120 })
           controls = await reader.decodeFromStream(stream, video, (result) => { if (result) done(result.getText()) })

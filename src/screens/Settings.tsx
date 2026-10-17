@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { deleteLocation, deleteZone, InventoryRow, keyUsage, Location, LOC_KINDS, saveLocation, saveZone, syncYear, Zone, ZONE_COLORS } from '../lib/api'
+import { deleteLocation, deleteZone, importParts, InventoryRow, keyUsage, Location, LOC_KINDS, parsePartsCsv, PartRow, saveLocation, saveZone, Status, STATUS, syncYear, Zone, ZONE_COLORS } from '../lib/api'
 import { Loc, toast } from '../components/Bits'
+import { Labels, type PartLabel } from '../labels'
 
 export function Settings({ rows, locations, zones, email, reload }: { rows: InventoryRow[]; locations: Location[]; zones: Zone[]; email: string; reload: () => void }) {
   return (
     <div className="page">
+      <PartsImport locations={locations} reload={reload} />
       <Places rows={rows} locations={locations} zones={zones} reload={reload} />
       <Keys />
       <Catalog />
@@ -197,6 +199,54 @@ function Pricing() {
         <div className="field"><label>מקדם לסטים שפרשו</label><input value={s.retired_multiplier || ''} onChange={e => setS({ ...s, retired_multiplier: e.target.value })} inputMode="decimal" /></div>
       </div>
       <button className="btn primary" type="button" disabled={busy} onClick={save}>שמור הגדרות</button>
+    </div>
+  )
+}
+
+/* ---------- parts import (BrickLink-format CSV from BrickMonkey, BrickLink or Rebrickable) + labels ---------- */
+function PartsImport({ locations, reload }: { locations: Location[]; reload: () => void }) {
+  const [file, setFile] = useState<{ name: string; rows: PartRow[]; skipped: number } | null>(null)
+  const [loc, setLoc] = useState('')
+  const [status, setStatus] = useState<Status>('personal')
+  const [busy, setBusy] = useState(false)
+  const [res, setRes] = useState<{ inserted: number; updated: number; unchanged: number } | null>(null)
+  const [labels, setLabels] = useState<PartLabel[] | null>(null)
+  const key = (r: PartRow) => r.part_no + '.' + (r.color_id ?? 0)
+  const toLabel = (r: PartRow): PartLabel => ({ id: key(r), part_no: r.part_no, color_id: r.color_id, color_name: r.color_name, name: r.name })
+
+  async function pick(f: File) {
+    setRes(null)
+    try { const p = parsePartsCsv(await f.text()); if (!p.rows.length) throw new Error('לא נמצאו חלקים בקובץ'); setFile({ name: f.name, ...p }) } catch (e) { setFile(null); toast((e as Error).message, true) }
+  }
+  async function run() {
+    if (!file) return
+    setBusy(true)
+    try {
+      const r = await importParts(file.rows, loc || null, status)
+      setRes(r); reload()
+      toast(`יובאו ${r.inserted} חדשים, ${r.updated} עודכנו`)
+    } catch (e) { toast('הייבוא נכשל: ' + (e as Error).message, true) } finally { setBusy(false) }
+  }
+  const units = file?.rows.reduce((s, r) => s + r.qty, 0) || 0
+  return (
+    <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
+      <div className="eyebrow">ייבוא חלקים ותוויות</div>
+      <p className="muted">קובץ CSV בפורמט של BrickLink (ייצוא מ BrickMonkey, BrickLink או Rebrickable). ייבוא חוזר של אותו אוסף מעדכן כמויות ולא משכפל. אחרי הייבוא: תוויות 50×30 למדפסת NIIMBOT B1.</p>
+      <label className="btn" style={{ justifySelf: 'start', cursor: 'pointer' }}>{file ? 'קובץ אחר' : 'בחר קובץ CSV'}<input type="file" accept=".csv,text/csv" hidden onChange={e => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = '' }} /></label>
+      {file && <>
+        <div className="import-sum"><b>{file.name}</b><span>{file.rows.length} סוגי חלקים · {units.toLocaleString('en-US')} יחידות{file.skipped ? ` · ${file.skipped} שורות שאינן חלקים דולגו` : ''}</span></div>
+        <div className="parts-mini">{file.rows.slice(0, 8).map(r => <span key={key(r)}><img src={r.color_id ? `https://img.bricklink.com/ItemImage/PN/${r.color_id}/${r.part_no}.png` : `https://img.bricklink.com/ItemImage/PL/${r.part_no}.png`} alt="" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.visibility = 'hidden' }} /><small>{r.qty}</small></span>)}{file.rows.length > 8 && <em>+{file.rows.length - 8}</em>}</div>
+        <div className="field2">
+          <div className="field"><label>מיקום לחלקים חדשים</label><select value={loc} onChange={e => setLoc(e.target.value)}><option value="">ללא מיקום</option>{locations.filter(l => l.active !== false).map(l => <option key={l.code} value={l.code}>{l.code} · {l.label}</option>)}</select></div>
+          <div className="field"><label>סטטוס</label><select value={status} onChange={e => setStatus(e.target.value as Status)}>{(['personal', 'sale', 'hold'] as Status[]).map(s => <option key={s} value={s}>{STATUS[s].he}</option>)}</select></div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" className="btn primary" disabled={busy} onClick={run}>{busy ? 'מייבא...' : res ? 'ייבא שוב' : `ייבא ${file.rows.length} חלקים`}</button>
+          <button type="button" className="btn" onClick={() => setLabels(file.rows.map(toLabel))}>תוויות לכל הקובץ ({file.rows.length})</button>
+        </div>
+        {res && <div className="import-sum ok"><b>יובא.</b><span>{res.inserted} חדשים · {res.updated} עודכנו · {res.unchanged} ללא שינוי. החלקים בלשונית "חלקים" במלאי.</span></div>}
+      </>}
+      {labels && <Labels parts={labels} onClose={() => setLabels(null)} />}
     </div>
   )
 }
