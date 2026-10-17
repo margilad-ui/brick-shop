@@ -214,8 +214,9 @@ function PartsImport({ locations, reload }: { locations: Location[]; reload: () 
   const [file, setFile] = useState<{ name: string; rows: PartRow[]; skipped: number } | null>(null)
   const [loc, setLoc] = useState('')
   const [status, setStatus] = useState<Status>('personal')
+  const [mode, setMode] = useState<'set' | 'add'>('set')
   const [busy, setBusy] = useState(false)
-  const [res, setRes] = useState<{ inserted: number; updated: number; unchanged: number } | null>(null)
+  const [res, setRes] = useState<{ inserted: number; updated: number; unchanged: number; new_keys: string[] } | null>(null)
   const [labels, setLabels] = useState<PartLabel[] | null>(null)
   const key = (r: PartRow) => r.part_no + '.' + (r.color_id ?? 0)
   const toLabel = (r: PartRow): PartLabel => ({ id: key(r), part_no: r.part_no, color_id: r.color_id, color_name: r.color_name, name: r.name })
@@ -228,7 +229,7 @@ function PartsImport({ locations, reload }: { locations: Location[]; reload: () 
     if (!file) return
     setBusy(true)
     try {
-      const r = await importParts(file.rows, loc || null, status)
+      const r = await importParts(file.rows, loc || null, status, mode)
       setRes(r); reload()
       toast(`יובאו ${r.inserted} חדשים, ${r.updated} עודכנו`)
     } catch (e) { toast('הייבוא נכשל: ' + (e as Error).message, true) } finally { setBusy(false) }
@@ -246,11 +247,16 @@ function PartsImport({ locations, reload }: { locations: Location[]; reload: () 
           <div className="field"><label>מיקום לחלקים חדשים</label><select value={loc} onChange={e => setLoc(e.target.value)}><option value="">ללא מיקום</option>{locations.filter(l => l.active !== false).map(l => <option key={l.code} value={l.code}>{l.code} · {l.label}</option>)}</select></div>
           <div className="field"><label>סטטוס</label><select value={status} onChange={e => setStatus(e.target.value as Status)}>{(['personal', 'sale', 'hold'] as Status[]).map(s => <option key={s} value={s}>{STATUS[s].he}</option>)}</select></div>
         </div>
+        <div className="modes">
+          <button type="button" className={mode === 'set' ? 'on' : ''} onClick={() => { setMode('set'); setRes(null) }}><b>כל האוסף</b><small>הקובץ הוא כל מה שיש. כמויות של חלקים קיימים נקבעות לפי הקובץ.</small></button>
+          <button type="button" className={mode === 'add' ? 'on' : ''} onClick={() => { setMode('add'); setRes(null) }}><b>תוספת</b><small>הקובץ הוא רק מה שנוסף (שקית חדשה). הכמויות מתווספות למה שכבר יש.</small></button>
+        </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button type="button" className="btn primary" disabled={busy} onClick={run}>{busy ? 'מייבא...' : res ? 'ייבא שוב' : `ייבא ${file.rows.length} חלקים`}</button>
+          <button type="button" className="btn primary" disabled={busy || !!res} onClick={run}>{busy ? 'מייבא...' : res ? 'יובא' : `ייבא ${file.rows.length} חלקים · ${mode === 'set' ? 'כל האוסף' : 'תוספת'}`}</button>
+          {res && res.new_keys.length > 0 && <button type="button" className="btn dark" onClick={() => { const nk = new Set(res.new_keys); setLabels(file.rows.filter(r => nk.has(key(r))).map(toLabel)) }}>תוויות רק לחדשים ({res.new_keys.length})</button>}
           <button type="button" className="btn" onClick={() => setLabels(file.rows.map(toLabel))}>תוויות לכל הקובץ ({file.rows.length})</button>
         </div>
-        {res && <div className="import-sum ok"><b>יובא.</b><span>{res.inserted} חדשים · {res.updated} עודכנו · {res.unchanged} ללא שינוי. החלקים בלשונית "חלקים" במלאי.</span></div>}
+        {res && <div className="import-sum ok"><b>יובא.</b><span>{res.inserted} חדשים · {res.updated} עודכנו · {res.unchanged} ללא שינוי. החלקים בלשונית "חלקים" במלאי. מיקום וסטטוס חלים רק על החדשים.</span></div>}
       </>}
       {labels && <Labels parts={labels} onClose={() => setLabels(null)} />}
     </div>

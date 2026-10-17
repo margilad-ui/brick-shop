@@ -207,8 +207,9 @@ function csvRecords(text: string): string[][] {
   row.push(f); if (row.some(x => x !== '')) out.push(row)
   return out
 }
-export async function importParts(rows: PartRow[], location: string | null, status: Status = 'personal') {
-  const { data, error } = await supabase.rpc('bs_import_parts', { p_rows: rows, p_location: location, p_status: status })
+/** mode 'set': the file is the whole collection, quantities are set to the file. 'add': the file is an addition, quantities are added */
+export async function importParts(rows: PartRow[], location: string | null, status: Status = 'personal', mode: 'set' | 'add' = 'set') {
+  const { data, error } = await supabase.rpc('bs_import_parts', { p_rows: rows, p_location: location, p_status: status, p_mode: mode })
   if (error) throw new Error(error.message)
-  return data as { inserted: number; updated: number; unchanged: number; ids: string[] }
+  return data as { inserted: number; updated: number; unchanged: number; new_keys: string[] }
 }

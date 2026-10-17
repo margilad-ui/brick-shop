@@ -310,3 +310,8 @@ select.sel{font-size:13px;border:1px solid var(--line-2);border-radius:999px;pad
 .labels-grid.tall{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 .labels-grid.round{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 .labels-grid.round .label-prev img{border-radius:50%;outline:1px dashed var(--line-2)}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modes button{display:grid;gap:3px;text-align:right;padding:10px 12px;border:1.5px solid var(--line-2);border-radius:12px;background:var(--paper);font:inherit;color:var(--ink);cursor:pointer}
+.modes button.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--yellow,#F5B81C) inset}
+.modes b{font-size:14px}
+.modes small{font-size:12px;color:var(--ink-2);line-height:1.35}
