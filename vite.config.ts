@@ -39,7 +39,7 @@ export default defineConfig({
         navigateFallback: base + 'index.html',
         globPatterns: ['**/*.{js,css,html,png,webp,svg,woff2}'],
         // the label maker (three.js, PDF) loads on demand only, keep it out of the shop's precache
-        globIgnores: ['**/LabelSheet-*.js', '**/html2canvas*.js', '**/purify*.js', '**/index.es-*.js'],
+        globIgnores: ['**/LabelSheet-*.js', '**/sheets-*.js', '**/html2canvas*.js', '**/purify*.js', '**/index.es-*.js'],
         runtimeCaching: [
           { urlPattern: /^https:\/\/[a-z]+\.supabase\.co\/storage\/v1\/object\/public\/bs-assets\/joey\/keyed\/.*/i, handler: 'CacheFirst', options: { cacheName: 'bs-assets', expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 } } },
           { urlPattern: /^https:\/\/images\.brickset\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'brickset-images', expiration: { maxEntries: 2000, maxAgeSeconds: 60 * 60 * 24 * 90 } } },
