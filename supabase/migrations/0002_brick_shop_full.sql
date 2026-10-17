@@ -94,8 +94,11 @@ create table if not exists public.bs_items (
   tags text[] not null default '{}',
   notes text, photo_url text,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  -- parts (kind 'parts', imported from a BrickLink-format CSV)
+  part_no text, color_id int, color_name text, part_cat text, bl_price numeric
 );
+create unique index if not exists bs_items_part_uq on public.bs_items (part_no, coalesce(color_id, -1)) where kind = 'parts' and part_no is not null;
 create index if not exists bs_items_set_idx on public.bs_items(set_num);
 create index if not exists bs_items_loc_idx on public.bs_items(location);
 create index if not exists bs_items_status_idx on public.bs_items(status);
@@ -215,7 +218,8 @@ select i.id, i.kind, i.set_num, coalesce(c.number, i.set_num) as number,
        c.age_min, coalesce(c.image_url, i.photo_url) as image_url, coalesce(c.thumb_url, i.photo_url) as thumb_url, c.exit_date, c.availability, c.rrp_us, c.ean as catalog_ean,
        (c.exit_date is not null and c.exit_date < current_date) as retired,
        i.location, l.wall, i.qty, i.condition, i.status, i.price, i.price_source, i.tags, i.notes,
-       i.photo_url, i.ean, i.created_at, i.updated_at
+       i.photo_url, i.ean, i.created_at, i.updated_at,
+       i.part_no, i.color_id, i.color_name, i.part_cat, i.bl_price
 from public.bs_items i
 left join public.bs_catalog c on c.set_num = i.set_num
 left join public.bs_locations l on l.code = i.location;
@@ -277,3 +281,6 @@ where r.rn <= 3 or r.has_box;
 grant select on public.bs_shop, public.bs_shop_demo, public.bs_shop_catalog, public.bs_shop_boxes, public.bs_shop_box_art, public.bs_catalog_images to anon, authenticated;
 grant execute on function public.bs_shop_config() to anon, authenticated;
 grant execute on function public.bs_place_order(jsonb) to anon, authenticated;
+
+-- parts import: bs_import_parts(p_rows jsonb, p_location text, p_status text) in the live project (17.10).
+-- Sets qty on re-import, inserts new part+colour lines with the BrickLink picture URL, logs movements. Owner only.
