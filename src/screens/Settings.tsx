@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { deleteLocation, deleteZone, importParts, InventoryRow, keyUsage, Location, LOC_KINDS, parsePartsCsv, PartRow, saveLocation, saveZone, Status, STATUS, syncYear, Zone, ZONE_COLORS } from '../lib/api'
 import { Loc, toast } from '../components/Bits'
-import { Labels, type PartLabel } from '../labels'
+import { Labels, LocationLabels, type LocLabel, type PartLabel } from '../labels'
 
 export function Settings({ rows, locations, zones, email, reload }: { rows: InventoryRow[]; locations: Location[]; zones: Zone[]; email: string; reload: () => void }) {
   return (
@@ -24,6 +24,9 @@ export function Settings({ rows, locations, zones, email, reload }: { rows: Inve
 /* ---------- places: zones (walls, rooms, cabinets) and their shelves ---------- */
 function Places({ rows, locations, zones, reload }: { rows: InventoryRow[]; locations: Location[]; zones: Zone[]; reload: () => void }) {
   const [nz, setNz] = useState({ code: '', name: '', color: 'red', site: '' })
+  const [lbl, setLbl] = useState<LocLabel[] | null>(null)
+  const toLbl = (l: Location): LocLabel => ({ code: l.code, label: l.label, kind: l.kind, kindName: LOC_KINDS[l.kind] || '', zoneName: zones.find(z => z.code === l.wall)?.name || null })
+  const onLabels = (ls: Location[]) => setLbl(ls.filter(l => l.active !== false).map(toLbl))
   const countAt = (code: string) => rows.filter(r => r.location === code && r.status !== 'sold').reduce((s, r) => s + r.qty, 0)
 
   async function addZone() {
@@ -34,9 +37,10 @@ function Places({ rows, locations, zones, reload }: { rows: InventoryRow[]; loca
   }
   return (
     <div className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>
-      <div className="eyebrow">מקומות: אזורים ומדפים</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}><div className="eyebrow">מקומות: אזורים ומדפים</div><button type="button" className="btn" onClick={() => onLabels(locations)}>תוויות מיקום</button></div>
       <p className="muted">אזור הוא קיר, ארון, חדר או מחסן. לכל אזור קוד קצר (אות או שתיים) וצבע, ובתוכו מדפים, קופסאות או תאים. קוד המיקום המלא הוא קוד האזור ומספר, למשל B3.</p>
-      {zones.map(z => <ZoneCard key={z.code} zone={z} shelves={locations.filter(l => l.wall === z.code)} countAt={countAt} reload={reload} />)}
+      {zones.map(z => <ZoneCard key={z.code} zone={z} shelves={locations.filter(l => l.wall === z.code)} countAt={countAt} reload={reload} onLabels={onLabels} />)}
+      {lbl && <LocationLabels locs={lbl} onClose={() => setLbl(null)} />}
       <div className="zone" style={{ background: 'var(--bg)' }}>
         <div className="eyebrow">אזור חדש</div>
         <div className="addrow">
@@ -55,7 +59,7 @@ function Swatches({ value, onChange }: { value: string; onChange: (c: string) =>
   return <div className="swatches">{Object.keys(ZONE_COLORS).map(c => <button type="button" key={c} className={value === c ? 'on' : ''} style={{ background: ZONE_COLORS[c] }} onClick={() => onChange(c)} aria-label={c} />)}</div>
 }
 
-function ZoneCard({ zone, shelves, countAt, reload }: { zone: Zone; shelves: Location[]; countAt: (c: string) => number; reload: () => void }) {
+function ZoneCard({ zone, shelves, countAt, reload, onLabels }: { zone: Zone; shelves: Location[]; countAt: (c: string) => number; reload: () => void; onLabels: (l: Location[]) => void }) {
   const [z, setZ] = useState(zone)
   const [dirty, setDirty] = useState(false)
   const [add, setAdd] = useState({ n: String((shelves.length ? Math.max(...shelves.map(s => s.shelf || 0)) : 0) + 1), kind: 'shelf', label: '' })
@@ -84,11 +88,12 @@ function ZoneCard({ zone, shelves, countAt, reload }: { zone: Zone; shelves: Loc
         <input className="st" value={z.site || ''} placeholder="איפה" onChange={e => { setZ({ ...z, site: e.target.value }); setDirty(true) }} aria-label="מקום" />
         <Swatches value={z.color} onChange={c => { setZ({ ...z, color: c }); setDirty(true) }} />
         <span className="muted">{total} פריטים</span>
+        {shelves.some(x => x.active) && <button type="button" className="btn" onClick={() => onLabels(shelves)}>תוויות</button>}
         {dirty && <button type="button" className="btn primary" onClick={save}>שמור</button>}
         {!shelves.length && <button type="button" className="btn danger" onClick={remove}>מחק אזור</button>}
       </div>
       <div className="shelves">
-        {shelves.map(s => <Shelf key={s.code} s={s} count={countAt(s.code)} reload={reload} />)}
+        {shelves.map(s => <Shelf key={s.code} s={s} count={countAt(s.code)} reload={reload} onLabel={() => onLabels([s])} />)}
       </div>
       <div className="addrow">
         <input className="code" value={add.n} onChange={e => setAdd({ ...add, n: e.target.value.replace(/\D/g, '') })} inputMode="numeric" aria-label="מספר" />
@@ -100,7 +105,7 @@ function ZoneCard({ zone, shelves, countAt, reload }: { zone: Zone; shelves: Loc
   )
 }
 
-function Shelf({ s, count, reload }: { s: Location; count: number; reload: () => void }) {
+function Shelf({ s, count, reload, onLabel }: { s: Location; count: number; reload: () => void; onLabel: () => void }) {
   const [label, setLabel] = useState(s.label || '')
   useEffect(() => setLabel(s.label || ''), [s.label])
   async function save() { if (label === (s.label || '')) return; try { await saveLocation({ ...s, label }); toast(s.code + ' עודכן') } catch (e) { toast((e as Error).message, true) } }
@@ -114,6 +119,7 @@ function Shelf({ s, count, reload }: { s: Location; count: number; reload: () =>
       <Loc code={s.code} small />
       <input value={label} onChange={e => setLabel(e.target.value)} onBlur={save} aria-label={'תיאור ' + s.code} />
       <b className="num" style={{ fontSize: 11 }}>{count}</b>
+      {s.active && <button type="button" onClick={onLabel} title="תווית QR" className="qrb">QR</button>}
       <button type="button" onClick={toggle} title={s.active ? 'השבת' : 'הפעל'}>{s.active ? '◌' : '●'}</button>
       {count === 0 && <button type="button" onClick={remove} title="מחק">×</button>}
     </span>

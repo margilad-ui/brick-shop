@@ -2,7 +2,6 @@
    Not an official NIIMBOT channel: the PDF download is the fallback. */
 import { NiimbotBluetoothClient, ImageEncoder, LabelType, PageColorType } from '@mmote/niimbluelib'
 import { jsPDF } from 'jspdf'
-import { LABEL_H, LABEL_W } from './render'
 
 let client: NiimbotBluetoothClient | null = null
 
@@ -44,12 +43,16 @@ export async function printLabels(canvases: HTMLCanvasElement[], density = 3, on
   }
 }
 
-/** one label per page, 50 x 30 mm, for the NIIMBOT app or any label printer */
-export function labelsPdf(canvases: HTMLCanvasElement[], name = 'brick-house-labels') {
-  const doc = new jsPDF({ unit: 'mm', format: [50, 30], orientation: 'landscape', compress: true })
+/** one label per page at the label's real size, for the NIIMBOT app or any label printer.
+    The canvas is placed centred; its width is the printable part (48 mm on a 50 mm label). */
+export function labelsPdf(canvases: HTMLCanvasElement[], mm: [number, number] = [50, 30], name = 'brick-house-labels') {
+  const [W, H] = mm
+  const orient = W >= H ? 'landscape' : 'portrait'
+  const doc = new jsPDF({ unit: 'mm', format: [W, H], orientation: orient, compress: true })
   canvases.forEach((cv, i) => {
-    if (i) doc.addPage([50, 30], 'landscape')
-    doc.addImage(cv.toDataURL('image/png'), 'PNG', 1, 0, 48, 48 * LABEL_H / LABEL_W, undefined, 'FAST')
+    if (i) doc.addPage([W, H], orient)
+    const w = cv.width / 8, h = cv.height / 8 // 8 dots per mm (203 dpi)
+    doc.addImage(cv.toDataURL('image/png'), 'PNG', (W - w) / 2, (H - h) / 2, w, h, undefined, 'FAST')
   })
   doc.save(`${name}.pdf`)
 }

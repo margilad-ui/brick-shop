@@ -46,6 +46,8 @@ export function Add({ locations }: { locations: Location[] }) {
     setScan(false); if (navigator.vibrate) navigator.vibrate(60)
     const part = /[?&]p=([^&#\s]+)/.exec(code)   // a BRICK HOUSE part label
     if (part) { window.dispatchEvent(new CustomEvent('bs:openpart', { detail: decodeURIComponent(part[1]) })); return }
+    const place = /[?&]loc=([^&#\s]+)/.exec(code)   // a BRICK HOUSE location label
+    if (place) { window.dispatchEvent(new CustomEvent('bs:openloc', { detail: decodeURIComponent(place[1]) })); return }
     setQ(code); doLookup(code)
   }, [doLookup])
 

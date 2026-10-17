@@ -6,11 +6,12 @@ import { Labels, type PartLabel } from '../labels'
 const partLabel = (r: InventoryRow): PartLabel => ({ id: r.id, part_no: r.part_no || r.number || '', color_id: r.color_id, color_name: r.color_name, name: r.name })
 export const partKeyOf = (r: { part_no: string | null; color_id: number | null }) => `${r.part_no}.${r.color_id ?? 0}`
 
-type Filters = { q: string; status: 'all' | Status; prod: 'all' | 'retired' | 'active'; stock: 'all' | 'in' | 'zero' | 'many'; themes: string[]; walls: string[]; tags: string[]; quick: 'all' | 'retired' | 'zero' | 'noprice' | 'week' }
-const F0: Filters = { q: '', status: 'all', prod: 'all', stock: 'all', themes: [], walls: [], tags: [], quick: 'all' }
+type Filters = { loc: string; q: string; status: 'all' | Status; prod: 'all' | 'retired' | 'active'; stock: 'all' | 'in' | 'zero' | 'many'; themes: string[]; walls: string[]; tags: string[]; quick: 'all' | 'retired' | 'zero' | 'noprice' | 'week' }
+const F0: Filters = { loc: '', q: '', status: 'all', prod: 'all', stock: 'all', themes: [], walls: [], tags: [], quick: 'all' }
 type SortKey = 'number' | 'theme' | 'name' | 'location' | 'qty' | 'price' | 'status' | 'retired' | 'updated_at'
 
 function passes(p: InventoryRow, F: Filters) {
+  if (F.loc && p.location !== F.loc) return false
   if (F.q) { const t = F.q.toLowerCase(); if (!`${p.name || ''} ${p.number || ''} ${p.theme || ''} ${p.location || ''} ${p.ean || ''} ${p.catalog_ean || ''} ${p.notes || ''} ${p.part_no || ''} ${p.color_name || ''} ${p.part_cat || ''}`.toLowerCase().includes(t)) return false }
   if (F.status !== 'all' && p.status !== F.status) return false
   if (F.prod === 'retired' && !p.retired) return false
@@ -28,8 +29,9 @@ function passes(p: InventoryRow, F: Filters) {
   return true
 }
 
-export function Inventory({ rows: allRows, locations, zones, reload, openPart, onOpened }: { rows: InventoryRow[]; locations: Location[]; zones: Zone[]; reload: () => void; openPart?: string | null; onOpened?: () => void }) {
+export function Inventory({ rows: allRows, locations, zones, reload, openPart, openLoc, onOpened }: { rows: InventoryRow[]; locations: Location[]; zones: Zone[]; reload: () => void; openPart?: string | null; openLoc?: string | null; onOpened?: () => void }) {
   const desktop = useMedia('(min-width: 900px)')
+  const [F, setF] = useState<Filters>(F0)
   const [mode, setMode] = useState<'items' | 'parts'>(() => (openPart || localStorage.getItem('bs_invmode') === 'parts') ? 'parts' : 'items')
   const [labels, setLabels] = useState<PartLabel[] | null>(null)
   useEffect(() => { localStorage.setItem('bs_invmode', mode) }, [mode])
@@ -42,7 +44,20 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
     if (hit) { setMode('parts'); setSel(hit) } else toast('החלק מהתווית לא נמצא במלאי', true)
     onOpened?.()
   }, [openPart, allRows]) // eslint-disable-line react-hooks/exhaustive-deps
-  const [F, setF] = useState<Filters>(F0)
+  // a scanned location label (?loc=K3): show what is inside
+  useEffect(() => {
+    if (!openLoc || !allRows.length) return
+    const here = allRows.filter(r => r.location === openLoc)
+    setF({ ...F0, loc: openLoc })
+    if (here.length && here.every(r => r.kind === 'parts')) setMode('parts'); else setMode('items')
+    onOpened?.()
+  }, [openLoc, allRows]) // eslint-disable-line react-hooks/exhaustive-deps
+  const locInfo = useMemo(() => {
+    if (!F.loc) return null
+    const here = allRows.filter(r => r.location === F.loc && r.status !== 'sold')
+    const items = here.filter(r => r.kind !== 'parts'), parts = here.filter(r => r.kind === 'parts')
+    return { l: locations.find(l => l.code === F.loc), items: items.reduce((s, r) => s + r.qty, 0), itemLines: items.length, parts: parts.reduce((s, r) => s + r.qty, 0), partLines: parts.length }
+  }, [F.loc, allRows, locations]) // eslint-disable-line react-hooks/exhaustive-deps
   const [sheet, setSheet] = useState(false)
   const [sel, setSel] = useState<InventoryRow | null>(null)
   const [sortK, setSortK] = useState<SortKey>('updated_at')
@@ -78,7 +93,8 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
 
   return (
     <div className="page">
-      {(partsCount > 0 || mode === 'parts') && <div className="seg"><button type="button" className={mode === 'items' ? 'on' : ''} onClick={() => { setMode('items'); setF(F0) }}>סטים ופריטים</button><button type="button" className={mode === 'parts' ? 'on' : ''} onClick={() => { setMode('parts'); setF(F0) }}>חלקים <span className="cnt">{partsCount}</span></button></div>}
+      {locInfo && <div className="locbar"><Loc code={F.loc} /><div><b>{locInfo.l?.label || F.loc}</b><small>{locInfo.itemLines ? `${locInfo.items} פריטים (${locInfo.itemLines} שורות)` : 'אין סטים'}{' · '}{locInfo.partLines ? `${locInfo.parts.toLocaleString('en-US')} חלקים (${locInfo.partLines} סוגים)` : 'אין חלקים'}</small></div><button type="button" onClick={() => setF({ ...F, loc: '' })} aria-label="נקה מיקום">✕</button></div>}
+      {(partsCount > 0 || mode === 'parts') && <div className="seg"><button type="button" className={mode === 'items' ? 'on' : ''} onClick={() => { setMode('items'); setF({ ...F0, loc: F.loc }) }}>סטים ופריטים</button><button type="button" className={mode === 'parts' ? 'on' : ''} onClick={() => { setMode('parts'); setF({ ...F0, loc: F.loc }) }}>חלקים <span className="cnt">{partsCount}</span></button></div>}
       {mode === 'parts' ? <PartsView rows={rows} q={F.q} setQ={q => setF({ ...F, q })} list={list} onPick={setSel} onLabels={l => setLabels(l.map(partLabel))} /> : <>
       <div className="kp">
         <div><small>פריטים במלאי</small><b>{kpi.units}</b></div>
@@ -146,7 +162,7 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
         <div className="overlay" onClick={e => { if (e.target === e.currentTarget) setSheet(false) }}>
           <div className="pane">
             <div className="grab" />
-            <h4>סינון<button type="button" onClick={() => setF({ ...F0, q: F.q })}>נקה הכל</button></h4>
+            <h4>סינון<button type="button" onClick={() => setF({ ...F0, q: F.q, loc: F.loc })}>נקה הכל</button></h4>
             {filterPane}
             <button className="cta" type="button" onClick={() => setSheet(false)}>הצג {list.length} תוצאות</button>
           </div>

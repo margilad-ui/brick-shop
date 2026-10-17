@@ -294,3 +294,19 @@ select.sel{font-size:13px;border:1px solid var(--line-2);border-radius:999px;pad
 .labels-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;position:sticky;bottom:-20px;background:var(--paper);padding:10px 0 4px}
 .density{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--ink-2)}
 .density select{border:1px solid var(--line-2);border-radius:8px;padding:4px 6px;font:inherit;background:var(--paper)}
+.locbar{display:flex;align-items:center;gap:10px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.locbar>div{flex:1;display:grid;min-width:0}
+.locbar b{font-weight:700;font-size:15px}
+.locbar small{color:var(--ink-2);font-size:12px}
+.locbar button{border:0;background:var(--bg);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;color:var(--ink-2)}
+.sh .qrb{font-family:var(--display);font-weight:800;font-size:9px;letter-spacing:.04em}
+.tpls{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tpl{display:grid;justify-items:center;gap:2px;padding:10px 6px;border:1.5px solid var(--line-2);border-radius:12px;background:var(--paper);cursor:pointer;font:inherit;color:var(--ink)}
+.tpl.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--yellow,#F5B81C) inset}
+.tpl i{display:block;height:34px;border:2px solid var(--ink);border-radius:4px;margin-bottom:4px}
+.tpl i.round{border-radius:50%}
+.tpl b{font-size:13px}
+.tpl small{font-size:11px;color:var(--stone)}
+.labels-grid.tall{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.labels-grid.round{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.labels-grid.round .label-prev img{border-radius:50%;outline:1px dashed var(--line-2)}

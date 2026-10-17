@@ -1,8 +1,14 @@
 /* lazy entry: three.js, the QR and the printer library load only when a label sheet is opened */
 import { lazy, Suspense } from 'react'
 import type { PartLabel } from './render'
-const Sheet = lazy(() => import('./LabelSheet'))
-export type { PartLabel }
+import type { LocLabel } from './locations'
+const PartsSheet = lazy(() => import('./sheets').then(m => ({ default: m.PartsSheet })))
+const LocSheet = lazy(() => import('./sheets').then(m => ({ default: m.LocSheet })))
+export type { PartLabel, LocLabel }
+const Wait = () => <div className="overlay"><div className="pane"><p className="muted">טוען את מכונת התוויות...</p></div></div>
 export function Labels({ parts, onClose }: { parts: PartLabel[]; onClose: () => void }) {
-  return <Suspense fallback={<div className="overlay"><div className="pane"><p className="muted">טוען את מכונת התוויות...</p></div></div>}><Sheet parts={parts} onClose={onClose} /></Suspense>
+  return <Suspense fallback={<Wait />}><PartsSheet parts={parts} onClose={onClose} /></Suspense>
+}
+export function LocationLabels({ locs, onClose }: { locs: LocLabel[]; onClose: () => void }) {
+  return <Suspense fallback={<Wait />}><LocSheet locs={locs} onClose={onClose} /></Suspense>
 }
