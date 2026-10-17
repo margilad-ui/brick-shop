@@ -157,6 +157,30 @@ export async function deleteItem(id: string) {
   if (error) throw error
 }
 
+/* ---------- bulk actions on many inventory lines at once (bs_bulk_items, one transaction per call, movements logged) ---------- */
+export type BulkOp = 'move' | 'status' | 'condition' | 'price' | 'tags_add' | 'tags_remove' | 'notes_append' | 'qty_add' | 'qty_set' | 'sold_one'
+const chunks = <T,>(a: T[], n: number) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n))
+export async function bulkItems(ids: string[], op: BulkOp, val: Record<string, unknown> = {}): Promise<number> {
+  let n = 0
+  for (const part of chunks(ids, 400)) {
+    const { data, error } = await supabase.rpc('bs_bulk_items', { p_ids: part, p_op: op, p_val: val })
+    if (error) throw new Error(error.message)
+    n += (data as { rows: number })?.rows || 0
+  }
+  return n
+}
+/* delete many lines: the removal is written to the movements log first, then the rows go */
+export async function bulkDelete(ids: string[]): Promise<number> {
+  let n = 0
+  for (const part of chunks(ids, 100)) {
+    await supabase.rpc('bs_bulk_items', { p_ids: part, p_op: 'log_remove', p_val: {} })
+    const { error, count } = await supabase.from('bs_items').delete({ count: 'exact' }).in('id', part)
+    if (error) throw new Error(error.message)
+    n += count || 0
+  }
+  return n
+}
+
 /* offline queue: adds that failed because of network are kept and retried */
 const QKEY = 'bs_queue'
 export function queueAdd(n: NewItem) { try { const q = JSON.parse(localStorage.getItem(QKEY) || '[]'); q.push(n); localStorage.setItem(QKEY, JSON.stringify(q)) } catch { /* ignore */ } }

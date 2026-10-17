@@ -1,17 +1,22 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CONDITION, Condition, deleteItem, fmtPrice, InventoryRow, Location, Status, STATUS, updateItem, Zone } from '../lib/api'
 import { Empty, Loc, Pic, ThemeTag, toast, useMedia } from '../components/Bits'
 import { Labels, type PartLabel } from '../labels'
+import { BulkAct, BulkBar, BulkSheet } from './Bulk'
 
 const partLabel = (r: InventoryRow): PartLabel => ({ id: r.id, part_no: r.part_no || r.number || '', color_id: r.color_id, color_name: r.color_name, name: r.name })
 export const partKeyOf = (r: { part_no: string | null; color_id: number | null }) => `${r.part_no}.${r.color_id ?? 0}`
 
-type Filters = { loc: string; q: string; status: 'all' | Status; prod: 'all' | 'retired' | 'active'; stock: 'all' | 'in' | 'zero' | 'many'; themes: string[]; walls: string[]; tags: string[]; quick: 'all' | 'retired' | 'zero' | 'noprice' | 'week' }
-const F0: Filters = { loc: '', q: '', status: 'all', prod: 'all', stock: 'all', themes: [], walls: [], tags: [], quick: 'all' }
+type Filters = { loc: string; q: string; status: 'all' | Status; prod: 'all' | 'retired' | 'active'; stock: 'all' | 'in' | 'zero' | 'many'; themes: string[]; walls: string[]; tags: string[]; quick: 'all' | 'retired' | 'zero' | 'noprice' | 'week'; pq: 'all' | 'noloc' | 'last' }
+const F0: Filters = { loc: '', q: '', status: 'all', prod: 'all', stock: 'all', themes: [], walls: [], tags: [], quick: 'all', pq: 'all' }
 type SortKey = 'number' | 'theme' | 'name' | 'location' | 'qty' | 'price' | 'status' | 'retired' | 'updated_at'
 
-function passes(p: InventoryRow, F: Filters) {
+/* the parts that came in with the newest import share one created_at (one transaction) */
+const LAST_WINDOW = 120e3
+function passes(p: InventoryRow, F: Filters, lastImport = 0) {
   if (F.loc && p.location !== F.loc) return false
+  if (F.pq === 'noloc' && p.location) return false
+  if (F.pq === 'last' && lastImport - new Date(p.created_at).getTime() > LAST_WINDOW) return false
   if (F.q) { const t = F.q.toLowerCase(); if (!`${p.name || ''} ${p.number || ''} ${p.theme || ''} ${p.location || ''} ${p.ean || ''} ${p.catalog_ean || ''} ${p.notes || ''} ${p.part_no || ''} ${p.color_name || ''} ${p.part_cat || ''}`.toLowerCase().includes(t)) return false }
   if (F.status !== 'all' && p.status !== F.status) return false
   if (F.prod === 'retired' && !p.retired) return false
@@ -62,6 +67,13 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
   const [sel, setSel] = useState<InventoryRow | null>(null)
   const [sortK, setSortK] = useState<SortKey>('updated_at')
   const [sortD, setSortD] = useState<1 | -1>(-1)
+  /* multi select: ids of checked rows; once anything is checked, tapping a row toggles it instead of opening it */
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [bulk, setBulk] = useState<BulkAct | 'menu' | null>(null)
+  const lastIdx = useRef<number>(-1)
+  useEffect(() => { setPicked(new Set()); lastIdx.current = -1 }, [mode])
+  useEffect(() => { setPicked(p => { if (!p.size) return p; const ok = new Set(allRows.map(r => r.id)); const n = new Set([...p].filter(id => ok.has(id))); return n.size === p.size ? p : n }) }, [allRows])
+  const lastImport = useMemo(() => allRows.reduce((m, r) => r.kind === 'parts' ? Math.max(m, new Date(r.created_at).getTime()) : m, 0), [allRows])
 
   const themes = useMemo(() => { const m: Record<string, number> = {}; rows.forEach(r => { if (r.theme) m[r.theme] = (m[r.theme] || 0) + 1 }); return Object.keys(m).sort().map(k => ({ k, c: m[k] })) }, [rows])
   const tags = useMemo(() => { const m: Record<string, number> = {}; rows.forEach(r => r.tags?.forEach(t => { m[t] = (m[t] || 0) + 1 })); return Object.keys(m).sort().map(k => ({ k, c: m[k] })) }, [rows])
@@ -69,15 +81,32 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
   const zoneName = (w: string) => zones.find(z => z.code === w)?.name || w
   void locations
   const list = useMemo(() => {
-    const l = rows.filter(r => passes(r, F))
+    const l = rows.filter(r => passes(r, F, lastImport))
     l.sort((a, b) => { let x: unknown = a[sortK], y: unknown = b[sortK]; if (typeof x === 'boolean') { x = x ? 1 : 0; y = y ? 1 : 0 } if (x == null) x = ''; if (y == null) y = ''; if (typeof x === 'string') { x = x.toLowerCase(); y = String(y).toLowerCase() } return ((x as number) > (y as number) ? 1 : (x as number) < (y as number) ? -1 : 0) * sortD })
     return l
-  }, [rows, F, sortK, sortD])
+  }, [rows, F, sortK, sortD, lastImport])
   const units = list.reduce((s, r) => s + r.qty, 0), value = list.reduce((s, r) => s + r.qty * (r.price || 0), 0)
   const active = rows.filter(r => r.status !== 'sold')
   const kpi = { units: active.reduce((s, r) => s + r.qty, 0), models: new Set(active.map(r => r.set_num || r.id)).size, value: active.filter(r => r.status === 'sale').reduce((s, r) => s + r.qty * (r.price || 0), 0), retired: active.filter(r => r.retired).length, noprice: active.filter(r => r.price == null && r.status === 'sale').length }
   const fcount = F.themes.length + F.walls.length + F.tags.length + (F.status !== 'all' ? 1 : 0) + (F.prod !== 'all' ? 1 : 0) + (F.stock !== 'all' ? 1 : 0)
   const toggle = (key: 'themes' | 'walls' | 'tags', v: string) => setF(f => ({ ...f, [key]: f[key].includes(v) ? f[key].filter(x => x !== v) : [...f[key], v] }))
+  const pickedRows = useMemo(() => allRows.filter(r => picked.has(r.id)), [allRows, picked])
+  const allOn = list.length > 0 && list.every(r => picked.has(r.id))
+  function togglePick(id: string, idx: number, shift = false) {
+    const from = lastIdx.current
+    setPicked(prev => {
+      const n = new Set(prev)
+      if (shift && from >= 0 && from !== idx) {
+        const on = !prev.has(id); const [a, b] = [Math.min(from, idx), Math.max(from, idx)]
+        list.slice(a, b + 1).forEach(r => on ? n.add(r.id) : n.delete(r.id))
+      } else if (n.has(id)) n.delete(id); else n.add(id)
+      return n
+    })
+    lastIdx.current = idx
+  }
+  function toggleAll() { setPicked(prev => { const n = new Set(prev); if (allOn) list.forEach(r => n.delete(r.id)); else list.forEach(r => n.add(r.id)); return n }) }
+  const rowClick = (p: InventoryRow, idx: number, shift = false) => { if (picked.size) togglePick(p.id, idx, shift); else setSel(p) }
+  const pick = { has: (id: string) => picked.has(id), any: picked.size > 0, allOn, toggle: togglePick, toggleAll, rowClick }
   const sortBy = (k: SortKey) => { if (sortK === k) setSortD(d => (d === 1 ? -1 : 1)); else { setSortK(k); setSortD(1) } }
 
   const filterPane = (
@@ -95,7 +124,7 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
     <div className="page">
       {locInfo && <div className="locbar"><Loc code={F.loc} /><div><b>{locInfo.l?.label || F.loc}</b><small>{locInfo.itemLines ? `${locInfo.items} פריטים (${locInfo.itemLines} שורות)` : 'אין סטים'}{' · '}{locInfo.partLines ? `${locInfo.parts.toLocaleString('en-US')} חלקים (${locInfo.partLines} סוגים)` : 'אין חלקים'}</small></div><button type="button" onClick={() => setF({ ...F, loc: '' })} aria-label="נקה מיקום">✕</button></div>}
       {(partsCount > 0 || mode === 'parts') && <div className="seg"><button type="button" className={mode === 'items' ? 'on' : ''} onClick={() => { setMode('items'); setF({ ...F0, loc: F.loc }) }}>סטים ופריטים</button><button type="button" className={mode === 'parts' ? 'on' : ''} onClick={() => { setMode('parts'); setF({ ...F0, loc: F.loc }) }}>חלקים <span className="cnt">{partsCount}</span></button></div>}
-      {mode === 'parts' ? <PartsView rows={rows} q={F.q} setQ={q => setF({ ...F, q })} list={list} onPick={setSel} onLabels={l => setLabels(l.map(partLabel))} /> : <>
+      {mode === 'parts' ? <PartsView rows={rows} F={F} setF={setF} list={list} lastImport={lastImport} pick={pick} onLabels={l => setLabels(l.map(partLabel))} /> : <>
       <div className="kp">
         <div><small>פריטים במלאי</small><b>{kpi.units}</b></div>
         <div><small>דגמים</small><b>{kpi.models}</b></div>
@@ -117,14 +146,16 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
         <div className="tablewrap">
           <table className="inv">
             <thead><tr>
+              <th className="ckcell" onClick={e => { e.stopPropagation(); toggleAll() }}><Ck on={allOn} part={!allOn && list.some(r => picked.has(r.id))} label="סמן הכל" /></th>
               <th style={{ width: 56 }}></th>
               {([['number', 'מספר סט', ''], ['theme', 'נושא', ''], ['name', 'שם הסט', ''], ['location', 'מדף', 'c'], ['qty', 'כמות', 'c'], ['price', 'מחיר', 'l'], ['status', 'סטטוס', ''], ['retired', 'ייצור', '']] as const).map(([k, h, c]) => (
                 <th key={k} className={c + (sortK === k ? ' sorted' : '')} onClick={() => sortBy(k)}>{h} <span style={{ fontSize: 9, opacity: .6 }}>{sortK === k ? (sortD > 0 ? '▲' : '▼') : '▲▼'}</span></th>
               ))}
             </tr></thead>
             <tbody>
-              {list.map(p => (
-                <tr key={p.id} className={sel?.id === p.id ? 'sel' : ''} onClick={() => setSel(p)}>
+              {list.map((p, i) => (
+                <tr key={p.id} className={(sel?.id === p.id ? 'sel' : '') + (picked.has(p.id) ? ' picked' : '')} onClick={e => rowClick(p, i, e.shiftKey)}>
+                  <td className="ckcell" onClick={e => { e.stopPropagation(); togglePick(p.id, i, e.shiftKey) }}><Ck on={picked.has(p.id)} /></td>
                   <td><div className="pic"><Pic src={p.thumb_url || p.image_url} fallback={p.number || ''} /></div></td>
                   <td className="setno">{p.number}</td>
                   <td><ThemeTag theme={p.theme} /></td>
@@ -138,12 +169,14 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
               ))}
             </tbody>
           </table>
-          <div className="tfoot"><span>מציג <b>{list.length}</b> שורות · <b>{units}</b> יחידות · שווי <b className="num">{fmtPrice(value) || '₪ 0'}</b></span><span>לחיצה על שורה פותחת את הפריט</span></div>
+          <div className="tfoot"><span>מציג <b>{list.length}</b> שורות · <b>{units}</b> יחידות · שווי <b className="num">{fmtPrice(value) || '₪ 0'}</b></span><span>{picked.size ? 'לחיצה על שורה מסמנת אותה · Shift לטווח' : 'לחיצה על שורה פותחת את הפריט · תיבת הסימון לבחירה מרובה'}</span></div>
         </div>
       ) : (
         <div className="rows">
-          {list.map(p => (
-            <button type="button" className="row" key={p.id} onClick={() => setSel(p)}>
+          <SelAll pick={pick} n={list.length} />
+          {list.map((p, i) => (
+            <button type="button" className={'row' + (picked.has(p.id) ? ' picked' : '')} key={p.id} onClick={e => rowClick(p, i, e.shiftKey)}>
+              <RowCk on={picked.has(p.id)} onToggle={sh => togglePick(p.id, i, sh)} />
               <div className="pic"><Pic src={p.thumb_url || p.image_url} fallback={p.number || ''} /></div>
               <div style={{ minWidth: 0 }}>
                 <div className="n">{p.name}</div>
@@ -171,6 +204,11 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
 
       {sel && <ItemDrawer item={sel} locations={locations} onClose={() => setSel(null)} onChanged={() => { setSel(null); reload() }} onLabel={() => setLabels([partLabel(sel)])} />}
       {labels && <Labels parts={labels} onClose={() => setLabels(null)} />}
+      {picked.size > 0 && !bulk && <BulkBar rows={pickedRows} isParts={mode === 'parts'} onClear={() => setPicked(new Set())} onAct={setBulk} onLabels={() => setLabels(pickedRows.filter(r => r.kind === 'parts').map(partLabel))} />}
+      {bulk && <BulkSheet rows={pickedRows} isParts={mode === 'parts'} locations={locations} zones={zones} start={bulk} onClose={() => setBulk(null)}
+        onDone={clear => { setBulk(null); if (clear) setPicked(new Set()); reload() }}
+        onLabels={() => { setBulk(null); setLabels(pickedRows.filter(r => r.kind === 'parts').map(partLabel)) }}
+        onCsv={() => exportCsv(pickedRows)} />}
     </div>
   )
 }
@@ -253,11 +291,28 @@ function ItemDrawer({ item, locations, onClose, onChanged, onLabel }: { item: In
   )
 }
 
+/* ---------- selection bits ---------- */
+type Pick = { has: (id: string) => boolean; any: boolean; allOn: boolean; toggle: (id: string, idx: number, shift?: boolean) => void; toggleAll: () => void; rowClick: (p: InventoryRow, idx: number, shift?: boolean) => void }
+function Ck({ on, part, label }: { on: boolean; part?: boolean; label?: string }) {
+  return <span className={'ck' + (on ? ' on' : part ? ' part' : '')} role="checkbox" aria-checked={on ? true : part ? 'mixed' : false} aria-label={label}>{on ? <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg> : part ? <i /> : null}</span>
+}
+function RowCk({ on, onToggle }: { on: boolean; onToggle: (shift: boolean) => void }) {
+  return <span className="rck" onClick={e => { e.stopPropagation(); onToggle(e.shiftKey) }}><Ck on={on} /></span>
+}
+function SelAll({ pick, n }: { pick: Pick; n: number }) {
+  if (!n) return null
+  return <button type="button" className="selall" onClick={pick.toggleAll}><Ck on={pick.allOn} /><span>{pick.allOn ? `בטל סימון של ${n}` : `סמן את כל ה ${n} שמוצגים`}</span>{!pick.any && <small>או סמן שורות בודדות בתיבה</small>}</button>
+}
+
 /* ---------- parts tab ---------- */
-function PartsView({ rows, q, setQ, list, onPick, onLabels }: { rows: InventoryRow[]; q: string; setQ: (q: string) => void; list: InventoryRow[]; onPick: (r: InventoryRow) => void; onLabels: (l: InventoryRow[]) => void }) {
+function PartsView({ rows, F, setF, list, lastImport, pick, onLabels }: { rows: InventoryRow[]; F: Filters; setF: (f: Filters) => void; list: InventoryRow[]; lastImport: number; pick: Pick; onLabels: (l: InventoryRow[]) => void }) {
   const units = rows.reduce((s, r) => s + r.qty, 0)
   const colors = new Set(rows.map(r => r.color_name).filter(Boolean)).size
   const worth = rows.reduce((s, r) => s + (r.bl_price || 0) * r.qty, 0)
+  const noloc = rows.filter(r => !r.location).length
+  const last = rows.filter(r => lastImport - new Date(r.created_at).getTime() <= LAST_WINDOW).length
+  const places = useMemo(() => { const m = new Map<string, number>(); rows.forEach(r => { if (r.location) m.set(r.location, (m.get(r.location) || 0) + 1) }); return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'en', { numeric: true })) }, [rows])
+  const lastWhen = lastImport ? new Date(lastImport).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
   return <>
     <div className="kp">
       <div><small>סוגי חלקים</small><b>{rows.length}</b></div>
@@ -266,17 +321,25 @@ function PartsView({ rows, q, setQ, list, onPick, onLabels }: { rows: InventoryR
       <div><small>שווי BrickLink</small><b>${Math.round(worth).toLocaleString('en-US')}</b></div>
     </div>
     <div className="srow">
-      <label className="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg><input value={q} onChange={e => setQ(e.target.value)} placeholder="שם, מספר חלק, צבע, קטגוריה" aria-label="חיפוש חלקים" /></label>
+      <label className="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg><input value={F.q} onChange={e => setF({ ...F, q: e.target.value })} placeholder="שם, מספר חלק, צבע, קטגוריה" aria-label="חיפוש חלקים" /></label>
       <button type="button" className="btn" disabled={!list.length} onClick={() => onLabels(list)}>תוויות ({list.length})</button>
+    </div>
+    <div className="hscroll">
+      <button type="button" className={'chip y' + (F.pq === 'all' && !F.loc ? ' on' : '')} onClick={() => setF({ ...F, pq: 'all', loc: '' })}>הכל<span className="cnt">{rows.length}</span></button>
+      {last > 0 && last < rows.length && <button type="button" className={'chip y' + (F.pq === 'last' ? ' on' : '')} onClick={() => setF({ ...F, pq: 'last', loc: '' })} title={lastWhen}>הייבוא האחרון<span className="cnt">{last}</span></button>}
+      {noloc > 0 && <button type="button" className={'chip y' + (F.pq === 'noloc' ? ' on' : '')} onClick={() => setF({ ...F, pq: 'noloc', loc: '' })}>בלי מיקום<span className="cnt">{noloc}</span></button>}
+      {places.map(([c, k]) => <button type="button" key={c} className={'chip' + (F.loc === c ? ' on' : '')} onClick={() => setF({ ...F, pq: 'all', loc: F.loc === c ? '' : c })}><Loc code={c} small /><span className="cnt">{k}</span></button>)}
     </div>
     {list.length === 0 ? <div className="card"><Empty title={rows.length ? 'אין חלק כזה' : 'עוד אין חלקים'} text={rows.length ? 'נסה חיפוש אחר' : 'הגדרות → ייבוא חלקים'} /></div> : (
       <div className="rows">
-        {list.map(p => (
-          <button type="button" className="row part" key={p.id} onClick={() => onPick(p)}>
+        <SelAll pick={pick} n={list.length} />
+        {list.map((p, i) => (
+          <button type="button" className={'row part' + (pick.has(p.id) ? ' picked' : '')} key={p.id} onClick={e => pick.rowClick(p, i, e.shiftKey)}>
+            <RowCk on={pick.has(p.id)} onToggle={sh => pick.toggle(p.id, i, sh)} />
             <div className="pic"><Pic src={p.image_url} fallback={p.part_no || ''} /></div>
             <div style={{ minWidth: 0 }}>
               <div className="n">{p.name}</div>
-              <div className="m"><span className="setno">{p.part_no}</span>{p.color_name && p.color_name !== 'Not Selected' && <span className="tag">{p.color_name}</span>}{p.location && <Loc code={p.location} small />}</div>
+              <div className="m"><span className="setno">{p.part_no}</span>{p.color_name && p.color_name !== 'Not Selected' && <span className="tag">{p.color_name}</span>}{p.location && <Loc code={p.location} small />}{p.tags?.slice(0, 2).map(t => <span className="tag t-yellow" key={t}>{t}</span>)}</div>
             </div>
             <div className="qc"><b className={p.qty ? '' : 'zero'}>{p.qty.toLocaleString('en-US')}</b><small>יחידות</small></div>
           </button>
@@ -287,9 +350,9 @@ function PartsView({ rows, q, setQ, list, onPick, onLabels }: { rows: InventoryR
 }
 
 function exportCsv(list: InventoryRow[]) {
-  const head = ['set_num', 'number', 'name', 'theme', 'year', 'pieces', 'location', 'qty', 'condition', 'status', 'price', 'retired', 'tags', 'notes']
+  const head = ['kind', 'set_num', 'number', 'part_no', 'color', 'name', 'theme', 'year', 'pieces', 'location', 'qty', 'condition', 'status', 'price', 'retired', 'tags', 'notes']
   const esc = (v: unknown) => '"' + String(v ?? '').replace(/"/g, '""') + '"'
-  const body = list.map(r => [r.set_num, r.number, r.name, r.theme, r.year, r.pieces, r.location, r.qty, r.condition, r.status, r.price, r.retired ? 'yes' : '', (r.tags || []).join('|'), r.notes].map(esc).join(','))
+  const body = list.map(r => [r.kind, r.set_num, r.number, r.part_no, r.color_name, r.name, r.theme, r.year, r.pieces, r.location, r.qty, r.condition, r.status, r.price, r.retired ? 'yes' : '', (r.tags || []).join('|'), r.notes].map(esc).join(','))
   const blob = new Blob(['﻿' + [head.join(','), ...body].join('\n')], { type: 'text/csv;charset=utf-8' })
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `brick-shop-${new Date().toISOString().slice(0, 10)}.csv`; a.click()
 }

@@ -284,3 +284,9 @@ grant execute on function public.bs_place_order(jsonb) to anon, authenticated;
 
 -- parts import: bs_import_parts(p_rows jsonb, p_location text, p_status text) in the live project (17.10).
 -- Sets qty on re-import, inserts new part+colour lines with the BrickLink picture URL, logs movements. Owner only.
+
+-- 17.10 night: bs_bulk_items(p_ids uuid[], p_op text, p_val jsonb) for the inventory multi select.
+-- security invoker (RLS) + bs_is_owner() check, one transaction per call, movements logged.
+-- ops: move, status, condition, price, tags_add, tags_remove, notes_append, qty_add, qty_set, sold_one, log_remove
+-- (bulk delete = log_remove, then the client deletes the rows; a delete inside the function was refused by the session filter)
+-- execute revoked from public and anon, granted to authenticated. Full body: select pg_get_functiondef('public.bs_bulk_items'::regproc)
