@@ -367,3 +367,4 @@ table.inv td.qty{display:table-cell;border:0;border-bottom:1px solid var(--line)
 .labels-grid.strip{grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr))}
 .labels-grid.strip .label-prev{padding:10px 8px;background:#d6c4a8}
 .labels-grid.strip .label-prev img{mix-blend-mode:multiply}
+.labels-grid.strip.white .label-prev{background:#fff}

@@ -19,6 +19,9 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
   const [busy, setBusy] = useState<string | null>(null)
   const [printer, setPrinter] = useState<string | null>(isConnected() ? printerName() : null)
   const [density, setDensity] = useState(() => Number(localStorage.getItem('bs_density') || 3))
+  /* roll type for D110 strips: transparent and white rolls are sensed differently */
+  const [paper, setPaper] = useState<'white' | 'clear'>(() => (localStorage.getItem('bs_paper_d110') === 'clear' ? 'clear' : 'white'))
+  useEffect(() => { try { localStorage.setItem('bs_paper_d110', paper) } catch { /* */ } }, [paper])
   const run = useRef(0)
 
   useEffect(() => {
@@ -58,7 +61,7 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
     if (wrongPrinter) { toast(`התבנית הזו ל ${tpl.printer}, והמחוברת היא ${printer}. החלף מדפסת.`, true); return }
     setBusy(`מדפיס 0 מתוך ${chosen.length}`)
     try {
-      await printLabels(chosen.map(d => d.canvas), density, tpl.paper === 'transparent', i => setBusy(`מדפיס ${i} מתוך ${chosen.length}`))
+      await printLabels(chosen.map(d => d.canvas), density, tpl.printer === 'D110' ? paper === 'clear' : tpl.paper === 'transparent', i => setBusy(`מדפיס ${i} מתוך ${chosen.length}`))
       toast(`הודפסו ${chosen.length} תוויות`)
     } catch (e) { toast('ההדפסה נעצרה: ' + ((e as Error).message || e), true) } finally { setBusy(null); setPrinter(isConnected() ? printerName() : null) }
   }
@@ -78,7 +81,7 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
         )}
         {groups.length > 1 && <div className="chips">{groups.map(g => <button type="button" key={g} className={'chip' + (groupOn(g) ? ' on' : '')} onClick={() => toggleGroup(g)}>{g}<span className="cnt">{items.filter(i => i.group === g && !skip.has(i.id)).length}</span></button>)}</div>}
         <p className="muted" style={{ margin: 0 }}>{ready ? `מוכן. לחיצה על תווית מוציאה אותה מההדפסה.` : `מצייר ${done.length} מתוך ${items.length}...`}</p>
-        <div className={'labels-grid' + (tpl.mm[1] > tpl.mm[0] ? ' tall' : '') + (tpl.round ? ' round' : '') + (tpl.mm[0] / tpl.mm[1] > 3 ? ' strip' : '')}>
+        <div className={'labels-grid' + (tpl.mm[1] > tpl.mm[0] ? ' tall' : '') + (tpl.round ? ' round' : '') + (tpl.mm[0] / tpl.mm[1] > 3 ? ' strip' + (paper === 'white' ? ' white' : '') : '')}>
           {done.map(d => (
             <button type="button" key={d.id} className={'label-prev' + (skip.has(d.id) ? ' off' : '')} onClick={() => setSkip(s => { const n = new Set(s); if (n.has(d.id)) n.delete(d.id); else n.add(d.id); return n })} title={d.title}>
               <img src={d.url} alt={d.title} style={{ aspectRatio: `${d.canvas.width} / ${d.canvas.height}` }} />
@@ -93,10 +96,11 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
               ? <>{wrongPrinter ? <button type="button" className="btn primary" disabled={!!busy} onClick={switchPrinter}>{`מחוברת ${printer}. החלף ל ${tpl.printer}`}</button> : <button type="button" className="btn primary" disabled={!ready || !!busy || !chosen.length} onClick={print}>{busy || `הדפס ${chosen.length} ב ${printer}`}</button>}{!wrongPrinter && <button type="button" className="btn" disabled={!!busy} onClick={switchPrinter}>החלף מדפסת</button>}</>
               : <button type="button" className="btn primary" disabled={!!busy} onClick={connect}>{busy || `חבר מדפסת ${tpl.printer || 'B1'}`}</button>
           ) : <span className="muted" style={{ fontSize: 13 }}>הדפסה ישירה עובדת בכרום (אנדרואיד או מחשב). כאן: PDF.</span>}
+          {tpl.printer === 'D110' && <div className="seg" role="group" aria-label="סוג גליל"><button type="button" className={paper === 'white' ? 'on' : ''} onClick={() => setPaper('white')}>לבן</button><button type="button" className={paper === 'clear' ? 'on' : ''} onClick={() => setPaper('clear')}>שקוף</button></div>}
           <label className="density">כהות<select value={density} onChange={e => setDensity(Number(e.target.value))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
           <button type="button" className="btn" disabled={!ready || !chosen.length} onClick={() => labelsPdf(chosen.map(d => d.canvas), tpl.mm, `brick-house-${tpl.key}-${new Date().toISOString().slice(0, 10)}`)}>הורד PDF</button>
         </div>
-        <p className="muted" style={{ margin: 0, fontSize: 12 }}>{tpl.printer === 'D110' ? `D110 עם גליל 50×12 שקוף. התווית יוצאת לאורכה. כהות 2 או 3.` : `גליל במדפסת: ${tpl.label} (${tpl.mm[0]}×${tpl.mm[1]}). להחליף גליל לפני ההדפסה.`}</p>
+        <p className="muted" style={{ margin: 0, fontSize: 12 }}>{tpl.printer === 'D110' ? `D110 עם גליל 50×12 ${paper === 'clear' ? 'שקוף' : 'לבן'}. התווית יוצאת לאורכה. כהות 2 או 3.` : `גליל במדפסת: ${tpl.label} (${tpl.mm[0]}×${tpl.mm[1]}). להחליף גליל לפני ההדפסה.`}</p>
       </div>
     </div>
   )

@@ -198,12 +198,11 @@ export const LOC_TEMPLATES: Template<LocLabel>[] = [
   { key: 'round31', label: 'עיגול QR', hint: '31 מ"מ, שקוף', mm: [31, 31], round: true, render: round31 },
   { key: 'round50', label: 'עיגול גדול', hint: '50 מ"מ, שקוף', mm: [50, 50], round: true, render: round50 },
 ]
-/* shelf strips for the D110, 50 x 12 transparent. All six while Gilad chooses; the chosen ones stay */
+/* shelf strips for the D110, 50 x 12 (Gilad chose 1, 3, 4, 5 on 26.10) */
+const D110 = { hint: 'D110 · 50×12', mm: [50, 12] as [number, number], printer: 'D110' }
 export const SHELF_TEMPLATES: Template<LocLabel>[] = [
-  { key: 's1', label: '1 בלוק + QR', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('blockqr') },
-  { key: 's2', label: '2 קו + QR', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('plainqr') },
-  { key: 's3', label: '3 בלוק לוגו QR', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('blockqrbrand') },
-  { key: 's4', label: '4 בלוק', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('block') },
-  { key: 's5', label: '5 קו', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('lines') },
-  { key: 's6', label: '6 בלוק + לוגו', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('blockbrand') },
+  { key: 's1', label: 'בלוק + QR', ...D110, render: strip('blockqr') },
+  { key: 's3', label: 'בלוק, לוגו, QR', ...D110, render: strip('blockqrbrand') },
+  { key: 's4', label: 'בלוק', ...D110, render: strip('block') },
+  { key: 's5', label: 'קו', ...D110, render: strip('lines') },
 ]
