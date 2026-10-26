@@ -1,7 +1,7 @@
 /* The label sheet: previews, direct print to the NIIMBOT B1, or a PDF. One sheet for every kind of label;
    the caller passes the items and the templates that can draw them. Loaded on demand. */
 import { useEffect, useRef, useState } from 'react'
-import { canBluetooth, connectPrinter, disconnectPrinter, isConnected, labelsPdf, printerName, printLabels } from './printer'
+import { canBluetooth, canShareFiles, connectPrinter, disconnectPrinter, downloadFiles, isConnected, labelFiles, labelsPdf, printerName, printLabels, shareFiles } from './printer'
 import { toast } from '../components/Bits'
 
 export type Rendered = { canvas: HTMLCanvasElement; source?: string }
@@ -56,6 +56,17 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
   }
   const wrongPrinter = !!(printer && tpl.printer && !printer.toUpperCase().startsWith(tpl.printer))
   async function switchPrinter() { await disconnectPrinter(); setPrinter(null) }
+  const [shareOk, setShareOk] = useState(false)
+  useEffect(() => { setShareOk(canShareFiles([new File([''], 'x.png', { type: 'image/png' })])) }, [])
+  async function images(mode: 'download' | 'share') {
+    if (!chosen.length) return
+    setBusy('מכין תמונות...')
+    try {
+      const files = await labelFiles(chosen.map(d => d.canvas), chosen.map(d => d.title))
+      if (mode === 'share') await shareFiles(files)
+      else { await downloadFiles(files); toast(`${files.length} תמונות ירדו לתיקיית ההורדות`) }
+    } catch (e) { if ((e as Error).name !== 'AbortError') toast('התמונות לא נוצרו: ' + ((e as Error).message || e), true) } finally { setBusy(null) }
+  }
   async function print() {
     if (!chosen.length) return
     if (wrongPrinter) { toast(`התבנית הזו ל ${tpl.printer}, והמחוברת היא ${printer}. החלף מדפסת.`, true); return }
@@ -99,6 +110,8 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
           {tpl.printer === 'D110' && <div className="seg" role="group" aria-label="סוג גליל"><button type="button" className={paper === 'white' ? 'on' : ''} onClick={() => setPaper('white')}>לבן</button><button type="button" className={paper === 'clear' ? 'on' : ''} onClick={() => setPaper('clear')}>שקוף</button></div>}
           <label className="density">כהות<select value={density} onChange={e => setDensity(Number(e.target.value))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
           <button type="button" className="btn" disabled={!ready || !chosen.length} onClick={() => labelsPdf(chosen.map(d => d.canvas), tpl.mm, `brick-house-${tpl.key}-${new Date().toISOString().slice(0, 10)}`)}>הורד PDF</button>
+          <button type="button" className="btn" disabled={!ready || !chosen.length || !!busy} onClick={() => images('download')}>הורד תמונות ({chosen.length})</button>
+          {shareOk && <button type="button" className="btn" disabled={!ready || !chosen.length || !!busy} onClick={() => images('share')}>שתף תמונות</button>}
         </div>
         <p className="muted" style={{ margin: 0, fontSize: 12 }}>{tpl.printer === 'D110' ? `D110 עם גליל 50×12 ${paper === 'clear' ? 'שקוף' : 'לבן'}. התווית יוצאת לאורכה. כהות 2 או 3.` : `גליל במדפסת: ${tpl.label} (${tpl.mm[0]}×${tpl.mm[1]}). להחליף גליל לפני ההדפסה.`}</p>
       </div>

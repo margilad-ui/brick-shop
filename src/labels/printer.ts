@@ -77,6 +77,32 @@ export async function printLabels(canvases: HTMLCanvasElement[], density = 3, tr
   throw new Error(`${msg} (${printerInfo()}, נוסו: ${order.join(', ')})`)
 }
 
+/* PNG files of the labels, for apps that only take a picture (the NIIMBOT app imports from the gallery).
+   Scaled up 4x with hard pixels, so the app can shrink it back to the label without blurring the edges. */
+export async function labelFiles(canvases: HTMLCanvasElement[], names: string[], scale = 4): Promise<File[]> {
+  const out: File[] = []
+  for (let i = 0; i < canvases.length; i++) {
+    const src = canvases[i]
+    const c = document.createElement('canvas'); c.width = src.width * scale; c.height = src.height * scale
+    const g = c.getContext('2d')!; g.imageSmoothingEnabled = false; g.drawImage(src, 0, 0, c.width, c.height)
+    const blob = await new Promise<Blob>((res, rej) => c.toBlob(b => (b ? res(b) : rej(new Error('PNG failed'))), 'image/png'))
+    out.push(new File([blob], `brick-house-${names[i].replace(/[^\w.-]+/g, '_')}.png`, { type: 'image/png' }))
+  }
+  return out
+}
+export const canShareFiles = (files: File[]) => { try { return !!navigator.canShare?.({ files }) } catch { return false } }
+/** the share sheet: straight into the NIIMBOT app, Google Photos, WhatsApp... */
+export async function shareFiles(files: File[]) { await navigator.share({ files, title: 'BRICK HOUSE labels' }) }
+/** one download per picture (Chrome asks once to allow several). On Android they land in the gallery's Download album */
+export async function downloadFiles(files: File[]) {
+  for (const f of files) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name
+    document.body.appendChild(a); a.click(); a.remove()
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000)
+    await new Promise(r => setTimeout(r, 350))
+  }
+}
+
 /** one label per page at the label's real size, for the NIIMBOT app or any label printer.
     The canvas is placed centred; its width is the printable part (48 mm on a 50 mm label). */
 export function labelsPdf(canvases: HTMLCanvasElement[], mm: [number, number] = [50, 30], name = 'brick-house-labels') {
