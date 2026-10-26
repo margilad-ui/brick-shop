@@ -6,7 +6,7 @@ import { toast } from '../components/Bits'
 
 export type Rendered = { canvas: HTMLCanvasElement; source?: string }
 /* printer: the model the template is drawn for (canvas width = its print head). paper: transparent rolls use their own sensing mode */
-export type Template<T> = { key: string; label: string; hint?: string; mm: [number, number]; round?: boolean; printer?: string; paper?: 'transparent'; render: (item: T) => Promise<Rendered> }
+export type Template<T> = { key: string; family?: string; label: string; hint?: string; mm: [number, number]; round?: boolean; printer?: string; paper?: 'transparent'; render: (item: T) => Promise<Rendered> }
 export type SheetItem<T> = { id: string; title: string; data: T; group?: string }
 type Done = { id: string; title: string; canvas: HTMLCanvasElement; url: string; source?: string }
 
@@ -14,6 +14,11 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
   const memKey = 'bs_tpl_' + templates.map(t => t.key).join('_')
   const [tplKey, setTplKey] = useState(() => { try { const k = localStorage.getItem(memKey); if (k && templates.some(t => t.key === k)) return k } catch { /* */ } return templates[0].key })
   const tpl = templates.find(t => t.key === tplKey) || templates[0]
+  /* templates that come in several sizes: a size switch, and the tiles of the chosen size only */
+  const sizes = [...new Set(templates.filter(t => t.family).map(t => t.mm.join('×')))]
+  const sizeOf = (t: Template<T>) => t.mm.join('×')
+  const shown = sizes.length > 1 && tpl.family ? templates.filter(t => sizeOf(t) === sizeOf(tpl)) : templates
+  const pickSize = (sz: string) => { const t = templates.find(x => sizeOf(x) === sz && x.family === tpl.family) || templates.find(x => sizeOf(x) === sz); if (t) setTplKey(t.key) }
   const [done, setDone] = useState<Done[]>([])
   const [skip, setSkip] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState<string | null>(null)
@@ -82,8 +87,9 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
       <div className="pane labels-pane">
         <div className="grab" />
         <h4>{title} · {items.length}<button type="button" onClick={onClose}>סגור</button></h4>
-        {templates.length > 1 && (
-          <div className="tpls">{templates.map(t => (
+        {sizes.length > 1 && <div className="seg" role="group" aria-label="גודל תווית">{sizes.map(sz => <button type="button" key={sz} className={sizeOf(tpl) === sz ? 'on' : ''} onClick={() => pickSize(sz)}><span className="ltr">{sz.split('×').join(' × ')}</span> מ"מ</button>)}</div>}
+        {shown.length > 1 && (
+          <div className="tpls">{shown.map(t => (
             <button type="button" key={t.key} className={'tpl' + (t.key === tpl.key ? ' on' : '')} onClick={() => setTplKey(t.key)}>
               <i className={t.round ? 'round' : ''} style={{ aspectRatio: `${t.mm[0]} / ${t.mm[1]}`, ...(t.mm[0] / t.mm[1] > 2 ? { width: '86%', height: 'auto', margin: '12px 0 14px' } : {}) }} />
               <b>{t.label}</b><small>{t.hint || `${t.mm[0]}×${t.mm[1]} מ"מ`}</small>

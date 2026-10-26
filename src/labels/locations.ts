@@ -153,9 +153,10 @@ function rrect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: 
   g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); g.fill()
 }
 export type ShelfStyle = 'block' | 'lines' | 'blockbrand' | 'blockqr' | 'blockqrbrand' | 'plainqr'
-export async function shelfStrip(l: LocLabel, style: ShelfStyle) {
+/** lenMm: 50 or 40. The strip is 12 mm high either way (96 dots), 8 dots per mm along */
+export async function shelfStrip(l: LocLabel, style: ShelfStyle, lenMm = 50) {
   await fonts()
-  const W = 400, H = 96, mx = 16, my = 8, ih = H - my * 2
+  const W = lenMm * 8, H = 96, mx = lenMm < 50 ? 12 : 16, my = 8, ih = H - my * 2, short = lenMm < 50
   const { c, g } = canvas(W, H)
   g.textBaseline = 'alphabetic'; g.direction = 'ltr'; g.textAlign = 'left'
   const code = l.code
@@ -165,11 +166,11 @@ export async function shelfStrip(l: LocLabel, style: ShelfStyle) {
   // the code: Montserrat 900, cap height about 7 mm
   const capOf = (px: number) => px * 0.7
   if (style === 'lines' || style === 'plainqr') {
-    const px = 84; g.font = MONT(900)(px)
+    const px = short && style === 'plainqr' ? 74 : 84; g.font = MONT(900)(px)
     const tw = g.measureText(code).width, cap = capOf(px), base = Math.round(H / 2 + cap / 2)
     if (style === 'lines') {
       const x = Math.round((W - tw) / 2); g.fillText(code, x, base)
-      const ly = Math.round(H / 2) - 1, gap = 16
+      const ly = Math.round(H / 2) - 1, gap = short ? 12 : 16
       g.fillRect(mx, ly, x - gap - mx, 3); g.fillRect(x + tw + gap, ly, W - mx - (x + tw + gap), 3)
     } else {
       g.fillText(code, mx, base)
@@ -179,19 +180,25 @@ export async function shelfStrip(l: LocLabel, style: ShelfStyle) {
     return { canvas: oneBit(c) }
   }
   // black block, clear letters: the shelf shows through the code
-  const px = 66; g.font = MONT(900)(px)
-  const tw = g.measureText(code).width, padX = 18, bw = Math.round(tw + padX * 2), bh = ih
+  const px = short && qr ? 58 : 66; g.font = MONT(900)(px)
+  const tw = g.measureText(code).width, padX = short && qr ? 13 : 18, bw = Math.round(tw + padX * 2), bh = ih
   const bx = style === 'block' ? Math.round((W - bw) / 2) : mx
   rrect(g, bx, my, bw, bh, 14)
   g.fillStyle = '#fff'; g.fillText(code, bx + padX, Math.round(H / 2 + capOf(px) / 2)); g.fillStyle = '#000'
   if (style === 'blockbrand' || style === 'blockqrbrand') {
-    const right = qr ? W - mx - qrW - 14 : W - mx, left = bx + bw + 14
-    // small wordmark centred in the free space
-    brand(g, (left + right) / 2, H / 2 + 1, qr ? 13 : 17)
+    const right = qr ? W - mx - qrW - 10 : W - mx, left = bx + bw + 10
+    // small wordmark centred in the free space, as big as fits (13 or 17 px at most)
+    let sz = qr ? 13 : 17
+    while (sz > 8 && brandWidth(g, sz) > right - left) sz--
+    brand(g, (left + right) / 2, H / 2 + 1, sz)
   }
   return { canvas: oneBit(c) }
 }
-const strip = (style: ShelfStyle) => (l: LocLabel) => shelfStrip(l, style)
+const strip = (style: ShelfStyle, len = 50) => (l: LocLabel) => shelfStrip(l, style, len)
+function brandWidth(g: CanvasRenderingContext2D, size: number) {
+  g.font = `800 ${size}px Montserrat, Arial, sans-serif`
+  return g.measureText('BR').width + g.measureText('CK HOUSE').width + size * 0.62 + size * 0.28
+}
 
 export const LOC_TEMPLATES: Template<LocLabel>[] = [
   { key: 'box5070', label: 'קופסה', mm: [50, 70], render: box },
@@ -199,10 +206,8 @@ export const LOC_TEMPLATES: Template<LocLabel>[] = [
   { key: 'round50', label: 'עיגול גדול', hint: '50 מ"מ, שקוף', mm: [50, 50], round: true, render: round50 },
 ]
 /* shelf strips for the D110, 50 x 12 (Gilad chose 1, 3, 4, 5 on 26.10) */
-const D110 = { hint: 'D110 · 50×12', mm: [50, 12] as [number, number], printer: 'D110' }
-export const SHELF_TEMPLATES: Template<LocLabel>[] = [
-  { key: 's1', label: 'בלוק + QR', ...D110, render: strip('blockqr') },
-  { key: 's3', label: 'בלוק, לוגו, QR', ...D110, render: strip('blockqrbrand') },
-  { key: 's4', label: 'בלוק', ...D110, render: strip('block') },
-  { key: 's5', label: 'קו', ...D110, render: strip('lines') },
-]
+/* two lengths on the same 12 mm roll width: 50 x 12 and 40 x 12 (26.10). family ties the same design across sizes */
+const STYLES: [string, string, ShelfStyle][] = [['s1', 'בלוק + QR', 'blockqr'], ['s3', 'בלוק, לוגו, QR', 'blockqrbrand'], ['s4', 'בלוק', 'block'], ['s5', 'קו', 'lines']]
+export const SHELF_TEMPLATES: Template<LocLabel>[] = [50, 40].flatMap(len => STYLES.map(([k, label, st]) => ({
+  key: len === 50 ? k : `${k}_40`, family: k, label, hint: `D110 · ${len}×12`, mm: [len, 12] as [number, number], printer: 'D110', render: strip(st, len),
+})))
