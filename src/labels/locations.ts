@@ -139,9 +139,11 @@ async function round50(l: LocLabel) {
    Drawn as the label is read: 400 x 96 dots. The D110 head is 96 dots wide (12 mm), the library turns the image.
    1 mm margin top and bottom, 2 mm at the ends. The QR is short on purpose: HTTPS://HOST/L/A3 in capitals is
    alphanumeric mode, so it fits version 2 (25 modules) at 3 dots a module, about 10 mm. main.tsx reads /L/<code>. */
+/* Always the Netlify address: the QR is in capitals, and GitHub Pages treats /BRICK-SHOP/ as a different path
+   (404, seen 26.10). Netlify's path is just /L/A3, and its rewrite sends every path to the app. */
+export const SCAN_HOST = 'https://brick-house-shop.netlify.app'
 export function shortLocUrl(code: string) {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
-  return `${location.origin}${base}/L/${code}`.toUpperCase()
+  return `${SCAN_HOST}/L/${code}`.toUpperCase()
 }
 function qrAlnum(g: CanvasRenderingContext2D, text: string, x0: number, y0: number, m: number) {
   const q = qrcode(0, 'L'); q.addData(text, 'Alphanumeric'); q.make()
