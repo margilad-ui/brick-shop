@@ -1,4 +1,4 @@
-/* Direct printing to a NIIMBOT B1 over Bluetooth, from Chrome (Android or desktop), through the open NiimBlue library.
+/* Direct printing to a NIIMBOT (B1, D110) over Bluetooth, from Chrome (Android or desktop), through the open NiimBlue library.
    Not an official NIIMBOT channel: the PDF download is the fallback. */
 import { NiimbotBluetoothClient, ImageEncoder, LabelType, PageColorType } from '@mmote/niimbluelib'
 import { jsPDF } from 'jspdf'
@@ -22,13 +22,14 @@ export function isConnected() { return !!client?.isConnected() }
 export async function disconnectPrinter() { try { await client?.disconnect() } finally { client = null } }
 
 /** prints every canvas once, in order. onPage(i) after each label */
-export async function printLabels(canvases: HTMLCanvasElement[], density = 3, onPage?: (i: number) => void) {
+export async function printLabels(canvases: HTMLCanvasElement[], density = 3, transparent = false, onPage?: (i: number) => void) {
   if (!client?.isConnected()) await connectPrinter()
   const c = client!
   const meta = c.getModelMetadata()
   const dir = meta?.printDirection ?? 'top'
   const taskType = c.getPrintTaskType() ?? 'B1'
-  const task = c.protocol.newPrintTask(taskType, { totalPages: canvases.length, density, labelType: LabelType.WithGaps, statusPollIntervalMs: 100, statusTimeoutMs: 15_000 })
+  const max = meta?.densityMax ?? 5
+  const task = c.protocol.newPrintTask(taskType, { totalPages: canvases.length, density: Math.min(density, max), labelType: transparent ? LabelType.Transparent : LabelType.WithGaps, statusPollIntervalMs: 100, statusTimeoutMs: 15_000 })
   try {
     await task.printInit()
     for (let i = 0; i < canvases.length; i++) {

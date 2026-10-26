@@ -25,8 +25,10 @@ export function Settings({ rows, locations, zones, email, reload }: { rows: Inve
 function Places({ rows, locations, zones, reload }: { rows: InventoryRow[]; locations: Location[]; zones: Zone[]; reload: () => void }) {
   const [nz, setNz] = useState({ code: '', name: '', color: 'red', site: '' })
   const [lbl, setLbl] = useState<LocLabel[] | null>(null)
+  const [strips, setStrips] = useState(false)
   const toLbl = (l: Location): LocLabel => ({ code: l.code, label: l.label, kind: l.kind, kindName: LOC_KINDS[l.kind] || '', zoneName: zones.find(z => z.code === l.wall)?.name || null })
-  const onLabels = (ls: Location[]) => setLbl(ls.filter(l => l.active !== false).map(toLbl))
+  const onLabels = (ls: Location[]) => { setStrips(false); setLbl(ls.filter(l => l.active !== false).map(toLbl)) }
+  const onStrips = () => { setStrips(true); setLbl(locations.filter(l => l.active !== false && l.kind === 'shelf').map(toLbl)) }
   const countAt = (code: string) => rows.filter(r => r.location === code && r.status !== 'sold').reduce((s, r) => s + r.qty, 0)
 
   async function addZone() {
@@ -37,10 +39,10 @@ function Places({ rows, locations, zones, reload }: { rows: InventoryRow[]; loca
   }
   return (
     <div className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}><div className="eyebrow">מקומות: אזורים ומדפים</div><button type="button" className="btn" onClick={() => onLabels(locations)}>תוויות מיקום</button></div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}><div className="eyebrow">מקומות: אזורים ומדפים</div><div style={{ display: 'flex', gap: 6 }}><button type="button" className="btn" onClick={onStrips}>תוויות מדפים</button><button type="button" className="btn" onClick={() => onLabels(locations)}>תוויות מיקום</button></div></div>
       <p className="muted">אזור הוא קיר, ארון, חדר או מחסן. לכל אזור קוד קצר (אות או שתיים) וצבע, ובתוכו מדפים, קופסאות או תאים. קוד המיקום המלא הוא קוד האזור ומספר, למשל B3.</p>
       {zones.map(z => <ZoneCard key={z.code} zone={z} shelves={locations.filter(l => l.wall === z.code)} countAt={countAt} reload={reload} onLabels={onLabels} />)}
-      {lbl && <LocationLabels locs={lbl} onClose={() => setLbl(null)} />}
+      {lbl && <LocationLabels locs={lbl} strips={strips} onClose={() => setLbl(null)} />}
       <div className="zone" style={{ background: 'var(--bg)' }}>
         <div className="eyebrow">אזור חדש</div>
         <div className="addrow">

@@ -9,6 +9,6 @@ const Wait = () => <div className="overlay"><div className="pane"><p className="
 export function Labels({ parts, onClose }: { parts: PartLabel[]; onClose: () => void }) {
   return <Suspense fallback={<Wait />}><PartsSheet parts={parts} onClose={onClose} /></Suspense>
 }
-export function LocationLabels({ locs, onClose }: { locs: LocLabel[]; onClose: () => void }) {
-  return <Suspense fallback={<Wait />}><LocSheet locs={locs} onClose={onClose} /></Suspense>
+export function LocationLabels({ locs, strips, onClose }: { locs: LocLabel[]; strips?: boolean; onClose: () => void }) {
+  return <Suspense fallback={<Wait />}><LocSheet locs={locs} strips={strips} onClose={onClose} /></Suspense>
 }

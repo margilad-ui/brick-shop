@@ -135,8 +135,75 @@ async function round50(l: LocLabel) {
   return { canvas: oneBit(c) }
 }
 
+/* ---------- shelf strip 50 x 12 (NIIMBOT D110, transparent) ----------
+   Drawn as the label is read: 400 x 96 dots. The D110 head is 96 dots wide (12 mm), the library turns the image.
+   1 mm margin top and bottom, 2 mm at the ends. The QR is short on purpose: HTTPS://HOST/L/A3 in capitals is
+   alphanumeric mode, so it fits version 2 (25 modules) at 3 dots a module, about 10 mm. main.tsx reads /L/<code>. */
+export function shortLocUrl(code: string) {
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+  return `${location.origin}${base}/L/${code}`.toUpperCase()
+}
+function qrAlnum(g: CanvasRenderingContext2D, text: string, x0: number, y0: number, m: number) {
+  const q = qrcode(0, 'L'); q.addData(text, 'Alphanumeric'); q.make()
+  const n = q.getModuleCount()
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect(x0 + c * m, y0 + r * m, m, m)
+  return n * m
+}
+function rrect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); g.fill()
+}
+export type ShelfStyle = 'block' | 'lines' | 'blockbrand' | 'blockqr' | 'blockqrbrand' | 'plainqr'
+export async function shelfStrip(l: LocLabel, style: ShelfStyle) {
+  await fonts()
+  const W = 400, H = 96, mx = 16, my = 8, ih = H - my * 2
+  const { c, g } = canvas(W, H)
+  g.textBaseline = 'alphabetic'; g.direction = 'ltr'; g.textAlign = 'left'
+  const code = l.code
+  const qr = style === 'blockqr' || style === 'blockqrbrand' || style === 'plainqr'
+  let qrW = 0
+  if (qr) { const t = shortLocUrl(code); const q = qrcode(0, 'L'); q.addData(t, 'Alphanumeric'); q.make(); const m = Math.min(3, Math.floor(ih / q.getModuleCount())); qrW = q.getModuleCount() * m; qrAlnum(g, t, W - mx - qrW, Math.round((H - qrW) / 2), m) }
+  // the code: Montserrat 900, cap height about 7 mm
+  const capOf = (px: number) => px * 0.7
+  if (style === 'lines' || style === 'plainqr') {
+    const px = 84; g.font = MONT(900)(px)
+    const tw = g.measureText(code).width, cap = capOf(px), base = Math.round(H / 2 + cap / 2)
+    if (style === 'lines') {
+      const x = Math.round((W - tw) / 2); g.fillText(code, x, base)
+      const ly = Math.round(H / 2) - 1, gap = 16
+      g.fillRect(mx, ly, x - gap - mx, 3); g.fillRect(x + tw + gap, ly, W - mx - (x + tw + gap), 3)
+    } else {
+      g.fillText(code, mx, base)
+      const x1 = mx + tw + 16, x2 = W - mx - qrW - 16
+      if (x2 - x1 > 20) g.fillRect(x1, Math.round(H / 2) - 1, x2 - x1, 3)
+    }
+    return { canvas: oneBit(c) }
+  }
+  // black block, clear letters: the shelf shows through the code
+  const px = 66; g.font = MONT(900)(px)
+  const tw = g.measureText(code).width, padX = 18, bw = Math.round(tw + padX * 2), bh = ih
+  const bx = style === 'block' ? Math.round((W - bw) / 2) : mx
+  rrect(g, bx, my, bw, bh, 14)
+  g.fillStyle = '#fff'; g.fillText(code, bx + padX, Math.round(H / 2 + capOf(px) / 2)); g.fillStyle = '#000'
+  if (style === 'blockbrand' || style === 'blockqrbrand') {
+    const right = qr ? W - mx - qrW - 14 : W - mx, left = bx + bw + 14
+    // small wordmark centred in the free space
+    brand(g, (left + right) / 2, H / 2 + 1, qr ? 13 : 17)
+  }
+  return { canvas: oneBit(c) }
+}
+const strip = (style: ShelfStyle) => (l: LocLabel) => shelfStrip(l, style)
+
 export const LOC_TEMPLATES: Template<LocLabel>[] = [
   { key: 'box5070', label: 'קופסה', mm: [50, 70], render: box },
   { key: 'round31', label: 'עיגול QR', hint: '31 מ"מ, שקוף', mm: [31, 31], round: true, render: round31 },
   { key: 'round50', label: 'עיגול גדול', hint: '50 מ"מ, שקוף', mm: [50, 50], round: true, render: round50 },
+]
+/* shelf strips for the D110, 50 x 12 transparent. All six while Gilad chooses; the chosen ones stay */
+export const SHELF_TEMPLATES: Template<LocLabel>[] = [
+  { key: 's1', label: '1 בלוק + QR', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('blockqr') },
+  { key: 's2', label: '2 קו + QR', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('plainqr') },
+  { key: 's3', label: '3 בלוק לוגו QR', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('blockqrbrand') },
+  { key: 's4', label: '4 בלוק', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('block') },
+  { key: 's5', label: '5 קו', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('lines') },
+  { key: 's6', label: '6 בלוק + לוגו', hint: 'D110 · 50×12', mm: [50, 12], printer: 'D110', paper: 'transparent', render: strip('blockbrand') },
 ]
