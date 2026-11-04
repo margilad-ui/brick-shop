@@ -39,6 +39,7 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
   const [F, setF] = useState<Filters>(F0)
   const [mode, setMode] = useState<'items' | 'parts'>(() => (openPart || localStorage.getItem('bs_invmode') === 'parts') ? 'parts' : 'items')
   const [labels, setLabels] = useState<PartLabel[] | null>(null)
+  const [labelsPre, setLabelsPre] = useState(false)
   useEffect(() => { localStorage.setItem('bs_invmode', mode) }, [mode])
   const partsCount = useMemo(() => allRows.filter(r => r.kind === 'parts').length, [allRows])
   const rows = useMemo(() => allRows.filter(r => (mode === 'parts') === (r.kind === 'parts')), [allRows, mode])
@@ -203,11 +204,11 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
       )}
 
       {sel && <ItemDrawer item={sel} locations={locations} onClose={() => setSel(null)} onChanged={() => { setSel(null); reload() }} onLabel={() => setLabels([partLabel(sel)])} />}
-      {labels && <Labels parts={labels} onClose={() => setLabels(null)} />}
-      {picked.size > 0 && !bulk && <BulkBar rows={pickedRows} isParts={mode === 'parts'} onClear={() => setPicked(new Set())} onAct={setBulk} onLabels={() => setLabels(pickedRows.filter(r => r.kind === 'parts').map(partLabel))} />}
+      {labels && <Labels parts={labels} preselect={labelsPre} onClose={() => { setLabels(null); setLabelsPre(false) }} />}
+      {picked.size > 0 && !bulk && <BulkBar rows={pickedRows} isParts={mode === 'parts'} onClear={() => setPicked(new Set())} onAct={setBulk} onLabels={() => { setLabelsPre(true); setLabels(pickedRows.filter(r => r.kind === 'parts').map(partLabel)) }} />}
       {bulk && <BulkSheet rows={pickedRows} isParts={mode === 'parts'} locations={locations} zones={zones} start={bulk} onClose={() => setBulk(null)}
         onDone={clear => { setBulk(null); if (clear) setPicked(new Set()); reload() }}
-        onLabels={() => { setBulk(null); setLabels(pickedRows.filter(r => r.kind === 'parts').map(partLabel)) }}
+        onLabels={() => { setBulk(null); setLabelsPre(true); setLabels(pickedRows.filter(r => r.kind === 'parts').map(partLabel)) }}
         onCsv={() => exportCsv(pickedRows)} />}
     </div>
   )

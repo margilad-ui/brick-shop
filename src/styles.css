@@ -285,8 +285,12 @@ select.sel{font-size:13px;border:1px solid var(--line-2);border-radius:999px;pad
 .labels-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:10px}
 .label-prev{position:relative;border:1px solid var(--line-2);border-radius:10px;background:#fff;padding:8px 4px;cursor:pointer;display:block}
 .label-prev img{width:100%;aspect-ratio:384/240;image-rendering:pixelated;display:block}
-.label-prev.off{opacity:.25}
-.label-prev.off::after{content:"לא יודפס";position:absolute;inset:auto 8px 8px auto;font-size:11px;background:var(--ink);color:#fff;border-radius:6px;padding:1px 6px}
+.label-prev.on{border-color:var(--ink);box-shadow:0 0 0 3px var(--yellow) inset,0 0 0 1px var(--ink)}
+.label-prev .lp-ck{position:absolute;top:-7px;inset-inline-start:-7px;z-index:1;width:24px;height:24px;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.labels-grid{padding-top:8px;padding-inline-start:8px}
+.pickbar{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.pickbar .selall{border-bottom:0;width:auto}
+.pickn{font-size:13px;font-weight:500;color:var(--ink-2);white-space:nowrap}
 .label-src{position:absolute;top:4px;left:4px;font-size:10px;background:var(--yellow,#F5B81C);color:var(--ink);border-radius:6px;padding:0 6px}
 .label-prev.wait{min-height:140px;display:grid;place-items:center;cursor:default}
 .label-prev.wait span{width:22px;height:22px;border:3px solid var(--line-2);border-top-color:var(--ink);border-radius:50%;animation:bsspin 1s linear infinite}

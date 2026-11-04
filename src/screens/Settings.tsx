@@ -240,6 +240,7 @@ function PartsImport({ locations, reload }: { locations: Location[]; reload: () 
   const [busy, setBusy] = useState(false)
   const [res, setRes] = useState<{ inserted: number; updated: number; unchanged: number; new_keys: string[] } | null>(null)
   const [labels, setLabels] = useState<PartLabel[] | null>(null)
+  const [newOnly, setNewOnly] = useState(false)
   const key = (r: PartRow) => r.part_no + '.' + (r.color_id ?? 0)
   const toLabel = (r: PartRow): PartLabel => ({ id: key(r), part_no: r.part_no, color_id: r.color_id, color_name: r.color_name, name: r.name })
 
@@ -275,12 +276,12 @@ function PartsImport({ locations, reload }: { locations: Location[]; reload: () 
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button type="button" className="btn primary" disabled={busy || !!res} onClick={run}>{busy ? 'מייבא...' : res ? 'יובא' : `ייבא ${file.rows.length} חלקים · ${mode === 'set' ? 'כל האוסף' : 'תוספת'}`}</button>
-          {res && res.new_keys.length > 0 && <button type="button" className="btn dark" onClick={() => { const nk = new Set(res.new_keys); setLabels(file.rows.filter(r => nk.has(key(r))).map(toLabel)) }}>תוויות רק לחדשים ({res.new_keys.length})</button>}
-          <button type="button" className="btn" onClick={() => setLabels(file.rows.map(toLabel))}>תוויות לכל הקובץ ({file.rows.length})</button>
+          {res && res.new_keys.length > 0 && <button type="button" className="btn dark" onClick={() => { const nk = new Set(res.new_keys); setNewOnly(true); setLabels(file.rows.filter(r => nk.has(key(r))).map(toLabel)) }}>תוויות רק לחדשים ({res.new_keys.length})</button>}
+          <button type="button" className="btn" onClick={() => { setNewOnly(false); setLabels(file.rows.map(toLabel)) }}>תוויות לכל הקובץ ({file.rows.length})</button>
         </div>
         {res && <div className="import-sum ok"><b>יובא.</b><span>{res.inserted} חדשים · {res.updated} עודכנו · {res.unchanged} ללא שינוי. החלקים בלשונית "חלקים" במלאי. מיקום וסטטוס חלים רק על החדשים.</span></div>}
       </>}
-      {labels && <Labels parts={labels} onClose={() => setLabels(null)} />}
+      {labels && <Labels parts={labels} preselect={newOnly} onClose={() => setLabels(null)} />}
     </div>
   )
 }

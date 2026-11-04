@@ -6,8 +6,8 @@ const PartsSheet = lazy(() => import('./sheets').then(m => ({ default: m.PartsSh
 const LocSheet = lazy(() => import('./sheets').then(m => ({ default: m.LocSheet })))
 export type { PartLabel, LocLabel }
 const Wait = () => <div className="overlay"><div className="pane"><p className="muted">טוען את מכונת התוויות...</p></div></div>
-export function Labels({ parts, onClose }: { parts: PartLabel[]; onClose: () => void }) {
-  return <Suspense fallback={<Wait />}><PartsSheet parts={parts} onClose={onClose} /></Suspense>
+export function Labels({ parts, onClose, preselect }: { parts: PartLabel[]; onClose: () => void; preselect?: boolean }) {
+  return <Suspense fallback={<Wait />}><PartsSheet parts={parts} onClose={onClose} preselect={preselect} /></Suspense>
 }
 export function LocationLabels({ locs, strips, onClose, onSaveText }: { locs: LocLabel[]; strips?: boolean; onClose: () => void; onSaveText?: (code: string, title: string, text: string) => Promise<void> }) {
   return <Suspense fallback={<Wait />}><LocSheet locs={locs} strips={strips} onClose={onClose} onSaveText={onSaveText} /></Suspense>

@@ -12,7 +12,8 @@ export type TextEdit<T> = { get: (d: T) => { title: string; text: string }; with
 export type SheetItem<T> = { id: string; title: string; data: T; group?: string }
 type Done = { id: string; title: string; canvas: HTMLCanvasElement; url: string; source?: string }
 
-export default function LabelSheet<T>({ title, items, templates, onClose, initial, textEdit }: { title: string; items: SheetItem<T>[]; templates: Template<T>[]; onClose: () => void; initial?: string; textEdit?: TextEdit<T> }) {
+/* selection: nothing is picked when the sheet opens (pick one by one, or all at once), except when the caller already chose (preselect), or there is a single label */
+export default function LabelSheet<T>({ title, items, templates, onClose, initial, textEdit, preselect }: { title: string; items: SheetItem<T>[]; templates: Template<T>[]; onClose: () => void; initial?: string; textEdit?: TextEdit<T>; preselect?: boolean }) {
   const memKey = 'bs_tpl_' + templates.map(t => t.key).join('_')
   const [tplKey, setTplKey] = useState(() => { if (initial && templates.some(t => t.key === initial)) return initial; try { const k = localStorage.getItem(memKey); if (k && templates.some(t => t.key === k)) return k } catch { /* */ } return templates[0].key })
   const tpl = templates.find(t => t.key === tplKey) || templates[0]
@@ -22,7 +23,8 @@ export default function LabelSheet<T>({ title, items, templates, onClose, initia
   const shown = sizes.length > 1 && tpl.family ? templates.filter(t => sizeOf(t) === sizeOf(tpl)) : templates
   const pickSize = (sz: string) => { const t = templates.find(x => sizeOf(x) === sz && x.family === tpl.family) || templates.find(x => sizeOf(x) === sz); if (t) setTplKey(t.key) }
   const [done, setDone] = useState<Done[]>([])
-  const [skip, setSkip] = useState<Set<string>>(new Set())
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(preselect || items.length === 1 ? items.map(i => i.id) : []))
+  const togglePick = (id: string) => setPicked(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const [busy, setBusy] = useState<string | null>(null)
   const [printer, setPrinter] = useState<string | null>(isConnected() ? printerName() : null)
   const [density, setDensity] = useState(() => Number(localStorage.getItem('bs_density') || 3))
@@ -75,9 +77,12 @@ export default function LabelSheet<T>({ title, items, templates, onClose, initia
   const ready = done.length === items.length
   /* group chips (walls): one tap leaves a whole group out of the print */
   const groups = [...new Set(items.map(i => i.group).filter(Boolean) as string[])]
-  const groupOn = (g: string) => items.some(i => i.group === g && !skip.has(i.id))
-  const toggleGroup = (g: string) => setSkip(s => { const n = new Set(s); const on = groupOn(g); items.filter(i => i.group === g).forEach(i => on ? n.add(i.id) : n.delete(i.id)); return n })
-  const chosen = done.filter(d => !skip.has(d.id))
+  const groupAll = (g: string) => items.filter(i => i.group === g).every(i => picked.has(i.id))
+  const groupN = (g: string) => items.filter(i => i.group === g && picked.has(i.id)).length
+  const toggleGroup = (g: string) => setPicked(s => { const n = new Set(s); const all = groupAll(g); items.filter(i => i.group === g).forEach(i => all ? n.delete(i.id) : n.add(i.id)); return n })
+  const allOn = items.length > 0 && items.every(i => picked.has(i.id))
+  const toggleAll = () => setPicked(allOn ? new Set() : new Set(items.map(i => i.id)))
+  const chosen = done.filter(d => picked.has(d.id))
 
   async function connect() {
     setBusy('מתחבר...')
@@ -120,12 +125,17 @@ export default function LabelSheet<T>({ title, items, templates, onClose, initia
             </button>
           ))}</div>
         )}
-        {groups.length > 1 && <div className="chips">{groups.map(g => <button type="button" key={g} className={'chip' + (groupOn(g) ? ' on' : '')} onClick={() => toggleGroup(g)}>{g}<span className="cnt">{items.filter(i => i.group === g && !skip.has(i.id)).length}</span></button>)}</div>}
-        <p className="muted" style={{ margin: 0 }}>{ready ? `מוכן. לחיצה על תווית מוציאה אותה מההדפסה.` : `מצייר ${done.length} מתוך ${items.length}...`}</p>
+        <div className="pickbar">
+          <button type="button" className="selall" onClick={toggleAll}><span className={'ck' + (allOn ? ' on' : picked.size ? ' part' : '')}>{allOn ? <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg> : picked.size ? <i /> : null}</span><span>{allOn ? 'בטל את כל הסימון' : `סמן את כל ה ${items.length}`}</span></button>
+          <b className="pickn">{picked.size ? `${picked.size} מסומנות` : 'שום תווית לא מסומנת'}</b>
+        </div>
+        {groups.length > 1 && <div className="chips">{groups.map(g => <button type="button" key={g} className={'chip' + (groupAll(g) ? ' on' : '')} onClick={() => toggleGroup(g)}>{g}<span className="cnt">{groupN(g)}/{items.filter(i => i.group === g).length}</span></button>)}</div>}
+        <p className="muted" style={{ margin: 0 }}>{ready ? `מוכן. לחיצה על תווית מסמנת אותה להדפסה.` : `מצייר ${done.length} מתוך ${items.length}...`}</p>
         <div className={'labels-grid' + (tpl.mm[1] > tpl.mm[0] ? ' tall' : '') + (tpl.round ? ' round' : '') + (tpl.mm[0] / tpl.mm[1] > 3 ? ' strip' + (paper === 'white' ? ' white' : '') : '')}>
           {done.map(d => (
             <div key={d.id} className={'label-cell' + (editing === d.id ? ' editing' : '')}>
-              <button type="button" className={'label-prev' + (skip.has(d.id) ? ' off' : '')} onClick={() => setSkip(s => { const n = new Set(s); if (n.has(d.id)) n.delete(d.id); else n.add(d.id); return n })} title={d.title}>
+              <button type="button" className={'label-prev' + (picked.has(d.id) ? ' on' : '')} aria-pressed={picked.has(d.id)} onClick={() => togglePick(d.id)} title={d.title}>
+                <span className={'ck lp-ck' + (picked.has(d.id) ? ' on' : '')}>{picked.has(d.id) && <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg>}</span>
                 <img src={d.url} alt={d.title} style={{ aspectRatio: `${d.canvas.width} / ${d.canvas.height}` }} />
                 {d.source && d.source !== 'ldraw' && <span className="label-src">{d.source === 'photo' ? 'מתמונה' : d.source === 'none' ? 'בלי תמונה' : d.source}</span>}
               </button>
@@ -144,7 +154,7 @@ export default function LabelSheet<T>({ title, items, templates, onClose, initia
         <div className="labels-acts">
           {canBluetooth() ? (
             printer
-              ? <>{wrongPrinter ? <button type="button" className="btn primary" disabled={!!busy} onClick={switchPrinter}>{`מחוברת ${printer}. החלף ל ${tpl.printer}`}</button> : <button type="button" className="btn primary" disabled={!ready || !!busy || !chosen.length} onClick={print}>{busy || `הדפס ${chosen.length} ב ${printer}`}</button>}{!wrongPrinter && <button type="button" className="btn" disabled={!!busy} onClick={switchPrinter}>החלף מדפסת</button>}</>
+              ? <>{wrongPrinter ? <button type="button" className="btn primary" disabled={!!busy} onClick={switchPrinter}>{`מחוברת ${printer}. החלף ל ${tpl.printer}`}</button> : <button type="button" className="btn primary" disabled={!ready || !!busy || !chosen.length} onClick={print}>{busy || (chosen.length ? `הדפס ${chosen.length} ב ${printer}` : 'סמן תוויות להדפסה')}</button>}{!wrongPrinter && <button type="button" className="btn" disabled={!!busy} onClick={switchPrinter}>החלף מדפסת</button>}</>
               : <button type="button" className="btn primary" disabled={!!busy} onClick={connect}>{busy || `חבר מדפסת ${tpl.printer || 'B1'}`}</button>
           ) : <span className="muted" style={{ fontSize: 13 }}>הדפסה ישירה עובדת בכרום (אנדרואיד או מחשב). כאן: PDF.</span>}
           {tpl.printer === 'D110' && <div className="seg" role="group" aria-label="סוג גליל"><button type="button" className={paper === 'white' ? 'on' : ''} onClick={() => setPaper('white')}>לבן</button><button type="button" className={paper === 'clear' ? 'on' : ''} onClick={() => setPaper('clear')}>שקוף</button></div>}
