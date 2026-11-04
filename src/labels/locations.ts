@@ -7,7 +7,7 @@
 import qrcode from 'qrcode-generator'
 import type { Template } from './LabelSheet'
 
-export type LocLabel = { code: string; label: string | null; kind: string; kindName: string; zoneName: string | null }
+export type LocLabel = { code: string; label: string | null; kind: string; kindName: string; zoneName: string | null; title?: string | null; text?: string | null }
 
 export function locUrl(code: string) {
   const base = import.meta.env.BASE_URL || '/'
@@ -15,7 +15,7 @@ export function locUrl(code: string) {
 }
 
 async function fonts() {
-  try { await Promise.all([document.fonts.load('900 40px Montserrat'), document.fonts.load('800 20px Montserrat'), document.fonts.load('700 20px Heebo')]) } catch { /* system fonts */ }
+  try { await Promise.all([document.fonts.load('900 40px Montserrat'), document.fonts.load('800 20px Montserrat'), document.fonts.load('700 20px Heebo'), document.fonts.load('800 20px Heebo'), document.fonts.load('500 20px Heebo')]) } catch { /* system fonts */ }
 }
 function canvas(w: number, h: number) {
   const c = document.createElement('canvas'); c.width = w; c.height = h
@@ -196,6 +196,74 @@ export async function shelfStrip(l: LocLabel, style: ShelfStyle, lenMm = 50) {
   }
   return { canvas: oneBit(c) }
 }
+/* ---------- box 80 x 50, read across (B1, 50 mm roll, 80 mm long) ----------
+   Drawn as read: 640 x 384 dots (80 x 48 printable). The sheet turns it a quarter for the B1 head.
+   Right: the box's own title and up to three lines, typed in the app (Hebrew, English or both).
+   Left: the code in a black block and a 25 mm QR. Bottom: the wordmark, small. */
+function lines(g: CanvasRenderingContext2D, text: string, maxW: number, max: number) {
+  const out: string[] = []
+  for (const para of text.split(/\n/).map(s => s.trim()).filter(Boolean)) {
+    for (const ln of wrapRtl(g, para, maxW, max)) out.push(ln)
+    if (out.length >= max) break
+  }
+  return out.slice(0, max)
+}
+/* the biggest size where the text fits in maxLines rows (a typed line may wrap); below the smallest size it is cut */
+function fitBlock(g: CanvasRenderingContext2D, text: string, font: (s: number) => string, max: number, min: number, w: number, maxLines: number, maxH: number, lh = 1.3) {
+  const paras = text.split(/\n/).map(x => x.trim()).filter(Boolean).slice(0, maxLines)
+  for (let s = max; s >= min; s--) {
+    g.font = font(s)
+    if (paras.every(p => g.measureText(p).width <= w) && paras.length * s * lh <= maxH) return { size: s, lines: paras }
+    const wrapped = lines(g, paras.join('\n'), w, 99)
+    if (wrapped.length <= maxLines && wrapped.every(x => g.measureText(x).width <= w) && wrapped.length * s * lh <= maxH) return { size: s, lines: wrapped }
+  }
+  // still too long: wrap at the smallest size, as many rows as the height allows
+  g.font = font(min)
+  const rows = Math.max(1, Math.min(maxLines, Math.floor(maxH / (min * lh))))
+  return { size: min, lines: lines(g, paras.join('\n'), w, rows) }
+}
+export async function boxWide(l: LocLabel) {
+  await fonts()
+  const W = 640, H = 384, m = 16
+  const { c, g } = canvas(W, H)
+  // left column: code block + QR
+  const colW = 216, x0 = m
+  g.direction = 'ltr'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'
+  const blockH = 70
+  rrect(g, x0, m, colW, blockH, 16)
+  g.fillStyle = '#fff'
+  const cs = fit(g, l.code, MONT(900), 56, 24, colW - 28)
+  g.fillText(l.code, x0 + colW / 2, m + blockH / 2 + cs * 0.35)
+  g.fillStyle = '#000'
+  const t = shortLocUrl(l.code)
+  const q = qrcode(0, 'L'); q.addData(t, 'Alphanumeric'); q.make()
+  const n = q.getModuleCount(), room = H - (m + blockH + 14) - m
+  const mod = Math.max(3, Math.floor(Math.min(colW, room) / n)), qs = n * mod
+  qrAlnum(g, t, Math.round(x0 + (colW - qs) / 2), Math.round(m + blockH + 14 + (room - qs) / 2), mod)
+  // divider
+  const dx = x0 + colW + 18
+  g.fillRect(dx, m + 6, 2, H - m * 2 - 12)
+  // right column: title and text, right aligned
+  const rx = W - m, rw = rx - (dx + 20)
+  g.direction = 'rtl'; g.textAlign = 'right'; g.textBaseline = 'top'
+  const title = (l.title || '').trim(), body = (l.text || '').trim()
+  let y = m + 2
+  const draw = (ln: string, yy: number) => { g.direction = /^[^\u0590-\u05FF]*[A-Za-z]/.test(ln) ? 'ltr' : 'rtl'; g.textAlign = 'right'; g.fillText(ln, rx, yy) }
+  if (title) {
+    const f = fitBlock(g, title, HEB(800), 56, 28, rw, 2, 132, 1.12)
+    for (const ln of f.lines) { draw(ln, y); y += Math.round(f.size * 1.12) }
+    y += 8; g.fillRect(rx - 56, y, 56, 4); y += 18
+  }
+  if (body) {
+    const f = fitBlock(g, body, HEB(500), 30, 17, rw, 3, H - m - 30 - y)
+    for (const ln of f.lines) { draw(ln, y); y += Math.round(f.size * 1.3) }
+  }
+  // wordmark, bottom right; bigger and centred in the column when the box has no text yet
+  if (!title && !body) brand(g, dx + 20 + rw / 2, H / 2, 26)
+  else { g.font = '800 15px Montserrat, Arial, sans-serif'; const bw = brandWidth(g, 15); brand(g, rx - bw / 2, H - m - 9, 15) }
+  return { canvas: oneBit(c) }
+}
+
 const strip = (style: ShelfStyle, len = 50) => (l: LocLabel) => shelfStrip(l, style, len)
 function brandWidth(g: CanvasRenderingContext2D, size: number) {
   g.font = `800 ${size}px Montserrat, Arial, sans-serif`
