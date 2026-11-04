@@ -122,7 +122,7 @@ export function Inventory({ rows: allRows, locations, zones, reload, openPart, o
 
   return (
     <div className="page">
-      {locInfo && <div className="locbar"><Loc code={F.loc} /><div><b>{locInfo.l?.label || F.loc}</b><small>{locInfo.itemLines ? `${locInfo.items} פריטים (${locInfo.itemLines} שורות)` : 'אין סטים'}{' · '}{locInfo.partLines ? `${locInfo.parts.toLocaleString('en-US')} חלקים (${locInfo.partLines} סוגים)` : 'אין חלקים'}</small></div><button type="button" onClick={() => setF({ ...F, loc: '' })} aria-label="נקה מיקום">✕</button></div>}
+      {locInfo && <div className="locbar"><Loc code={F.loc} /><div><b>{locInfo.l?.title || locInfo.l?.label || F.loc}</b>{locInfo.l?.body && <small className="locbody">{locInfo.l.body.split('\n').join(' · ')}</small>}<small>{locInfo.itemLines ? `${locInfo.items} פריטים (${locInfo.itemLines} שורות)` : 'אין סטים'}{' · '}{locInfo.partLines ? `${locInfo.parts.toLocaleString('en-US')} חלקים (${locInfo.partLines} סוגים)` : 'אין חלקים'}</small></div><button type="button" onClick={() => setF({ ...F, loc: '' })} aria-label="נקה מיקום">✕</button></div>}
       {(partsCount > 0 || mode === 'parts') && <div className="seg"><button type="button" className={mode === 'items' ? 'on' : ''} onClick={() => { setMode('items'); setF({ ...F0, loc: F.loc }) }}>סטים ופריטים</button><button type="button" className={mode === 'parts' ? 'on' : ''} onClick={() => { setMode('parts'); setF({ ...F0, loc: F.loc }) }}>חלקים <span className="cnt">{partsCount}</span></button></div>}
       {mode === 'parts' ? <PartsView rows={rows} F={F} setF={setF} list={list} lastImport={lastImport} pick={pick} onLabels={l => setLabels(l.map(partLabel))} /> : <>
       <div className="kp">

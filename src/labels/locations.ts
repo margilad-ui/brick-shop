@@ -271,6 +271,7 @@ function brandWidth(g: CanvasRenderingContext2D, size: number) {
 }
 
 export const LOC_TEMPLATES: Template<LocLabel>[] = [
+  { key: 'box8050', label: 'קופסה עם טקסט', hint: 'B1 · 80×50', mm: [80, 50], printer: 'B1', turn: true, text: true, render: boxWide },
   { key: 'box5070', label: 'קופסה', mm: [50, 70], render: box },
   { key: 'round31', label: 'עיגול QR', hint: '31 מ"מ, שקוף', mm: [31, 31], round: true, render: round31 },
   { key: 'round50', label: 'עיגול גדול', hint: '50 מ"מ, שקוף', mm: [50, 50], round: true, render: round50 },

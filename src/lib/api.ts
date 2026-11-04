@@ -12,7 +12,7 @@ export type Lookup =
   | { found: false; reason: 'barcode_unknown' | 'set_unknown'; q: string }
   | { error: string }
 
-export type Location = { code: string; wall: string; shelf: number | null; label: string | null; color: string | null; sort: number; kind: string; active: boolean }
+export type Location = { code: string; wall: string; shelf: number | null; label: string | null; color: string | null; sort: number; kind: string; active: boolean; title?: string | null; body?: string | null }
 export type Zone = { code: string; name: string; color: string; site: string | null; sort: number }
 export const ZONE_COLORS: Record<string, string> = { red: 'var(--red)', blue: 'var(--blue)', green: 'var(--green)', yellow: 'var(--yellow)', cocoa: 'var(--cocoa)', oak: 'var(--oak)', ink: 'var(--ink)', stone: 'var(--stone)' }
 export const LOC_KINDS: Record<string, string> = { shelf: 'מדף', cube: 'קובייה', box: 'קופסה', cabinet: 'ארון', drawer: 'מגירה', bin: 'תא', other: 'אחר' }
@@ -71,6 +71,11 @@ export async function loadZones(): Promise<Zone[]> {
 export async function saveZone(z: Zone) { const { error } = await supabase.from('bs_zones').upsert(z, { onConflict: 'code' }); if (error) throw error }
 export async function deleteZone(code: string) { const { error } = await supabase.from('bs_zones').delete().eq('code', code); if (error) throw error }
 export async function saveLocation(l: Partial<Location> & { code: string; wall: string }) { const { error } = await supabase.from('bs_locations').upsert(l, { onConflict: 'code' }); if (error) throw error }
+/* the text printed on a box label: a title and up to three lines (newline separated) */
+export async function saveLocationText(code: string, title: string, body: string) {
+  const { error } = await supabase.from('bs_locations').update({ title: title.trim() || null, body: body.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 3).join('\n') || null }).eq('code', code)
+  if (error) throw error
+}
 export async function deleteLocation(code: string) { const { error } = await supabase.from('bs_locations').delete().eq('code', code); if (error) throw error }
 export async function loadInventory(): Promise<InventoryRow[]> {
   const { data, error } = await supabase.from('bs_inventory').select('*').order('updated_at', { ascending: false }).limit(5000)

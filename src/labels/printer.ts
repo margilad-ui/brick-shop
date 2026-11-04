@@ -77,6 +77,15 @@ export async function printLabels(canvases: HTMLCanvasElement[], density = 3, tr
   throw new Error(`${msg} (${printerInfo()}, נוסו: ${order.join(', ')})`)
 }
 
+/** a quarter turn clockwise: a label drawn as read across (80 x 50) becomes 384 dots wide for the B1 head */
+export function turnCanvas(src: HTMLCanvasElement) {
+  const c = document.createElement('canvas'); c.width = src.height; c.height = src.width
+  const g = c.getContext('2d')!
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height)
+  g.translate(c.width, 0); g.rotate(Math.PI / 2); g.drawImage(src, 0, 0)
+  return c
+}
+
 /* PNG files of the labels, for apps that only take a picture (the NIIMBOT app imports from the gallery).
    Scaled up 4x with hard pixels, so the app can shrink it back to the label without blurring the edges. */
 export async function labelFiles(canvases: HTMLCanvasElement[], names: string[], scale = 4): Promise<File[]> {

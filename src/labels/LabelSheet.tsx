@@ -1,18 +1,20 @@
 /* The label sheet: previews, direct print to the NIIMBOT B1, or a PDF. One sheet for every kind of label;
    the caller passes the items and the templates that can draw them. Loaded on demand. */
 import { useEffect, useRef, useState } from 'react'
-import { canBluetooth, canShareFiles, connectPrinter, disconnectPrinter, downloadFiles, isConnected, labelFiles, labelsPdf, printerName, printLabels, shareFiles } from './printer'
+import { canBluetooth, canShareFiles, connectPrinter, disconnectPrinter, downloadFiles, isConnected, labelFiles, labelsPdf, printerName, printLabels, shareFiles, turnCanvas } from './printer'
 import { toast } from '../components/Bits'
 
 export type Rendered = { canvas: HTMLCanvasElement; source?: string }
 /* printer: the model the template is drawn for (canvas width = its print head). paper: transparent rolls use their own sensing mode */
-export type Template<T> = { key: string; family?: string; label: string; hint?: string; mm: [number, number]; round?: boolean; printer?: string; paper?: 'transparent'; render: (item: T) => Promise<Rendered> }
+export type Template<T> = { key: string; family?: string; label: string; hint?: string; mm: [number, number]; round?: boolean; printer?: string; paper?: 'transparent'; turn?: boolean; text?: boolean; render: (item: T) => Promise<Rendered> }
+/* labels whose text is typed in the app: how to read it from an item, put it back, and save it */
+export type TextEdit<T> = { get: (d: T) => { title: string; text: string }; with: (d: T, v: { title: string; text: string }) => T; save: (d: T, v: { title: string; text: string }) => Promise<void> }
 export type SheetItem<T> = { id: string; title: string; data: T; group?: string }
 type Done = { id: string; title: string; canvas: HTMLCanvasElement; url: string; source?: string }
 
-export default function LabelSheet<T>({ title, items, templates, onClose }: { title: string; items: SheetItem<T>[]; templates: Template<T>[]; onClose: () => void }) {
+export default function LabelSheet<T>({ title, items, templates, onClose, initial, textEdit }: { title: string; items: SheetItem<T>[]; templates: Template<T>[]; onClose: () => void; initial?: string; textEdit?: TextEdit<T> }) {
   const memKey = 'bs_tpl_' + templates.map(t => t.key).join('_')
-  const [tplKey, setTplKey] = useState(() => { try { const k = localStorage.getItem(memKey); if (k && templates.some(t => t.key === k)) return k } catch { /* */ } return templates[0].key })
+  const [tplKey, setTplKey] = useState(() => { if (initial && templates.some(t => t.key === initial)) return initial; try { const k = localStorage.getItem(memKey); if (k && templates.some(t => t.key === k)) return k } catch { /* */ } return templates[0].key })
   const tpl = templates.find(t => t.key === tplKey) || templates[0]
   /* templates that come in several sizes: a size switch, and the tiles of the chosen size only */
   const sizes = [...new Set(templates.filter(t => t.family).map(t => t.mm.join('×')))]
@@ -28,6 +30,28 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
   const [paper, setPaper] = useState<'white' | 'clear'>(() => (localStorage.getItem('bs_paper_d110') === 'clear' ? 'clear' : 'white'))
   useEffect(() => { try { localStorage.setItem('bs_paper_d110', paper) } catch { /* */ } }, [paper])
   const run = useRef(0)
+  /* typed text: saved values per item (over), and the label being edited with its live values */
+  const [over, setOver] = useState<Record<string, T>>({})
+  const [editing, setEditing] = useState<string | null>(null)
+  const [form, setForm] = useState({ title: '', text: '' })
+  const dataOf = (it: SheetItem<T>) => over[it.id] ?? it.data
+  const canEdit = !!(textEdit && tpl.text)
+  function openEdit(id: string) { const it = items.find(i => i.id === id); if (!it || !textEdit) return; setForm(textEdit.get(dataOf(it))); setEditing(id) }
+  async function redraw(id: string, d: T) {
+    try { const r = await tpl.render(d); setDone(ds => ds.map(x => (x.id === id ? { ...x, canvas: r.canvas, url: r.canvas.toDataURL('image/png') } : x))) } catch { /* keep the old picture */ }
+  }
+  useEffect(() => {
+    if (!editing || !textEdit) return
+    const it = items.find(i => i.id === editing); if (!it) return
+    const t = setTimeout(() => redraw(editing, textEdit.with(dataOf(it), form)), 180)
+    return () => clearTimeout(t)
+  }, [form, editing]) // eslint-disable-line react-hooks/exhaustive-deps
+  async function saveEdit() {
+    const it = items.find(i => i.id === editing); if (!it || !textEdit) return
+    setBusy('שומר...')
+    try { await textEdit.save(dataOf(it), form); setOver(o => ({ ...o, [it.id]: textEdit.with(dataOf(it), form) })); toast(`${it.title} נשמר`); setEditing(null) } catch (e) { toast('לא נשמר: ' + ((e as Error).message || e), true) } finally { setBusy(null) }
+  }
+  function cancelEdit() { const it = items.find(i => i.id === editing); setEditing(null); if (it) redraw(it.id, dataOf(it)) }
 
   useEffect(() => {
     const my = ++run.current
@@ -37,7 +61,7 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
       for (const it of items) {
         if (run.current !== my) return
         try {
-          const r = await tpl.render(it.data)
+          const r = await tpl.render(dataOf(it))
           if (run.current !== my) return
           setDone(d => [...d, { id: it.id, title: it.title, canvas: r.canvas, url: r.canvas.toDataURL('image/png'), source: r.source }])
         } catch (e) { console.warn('label', it.id, e) }
@@ -77,7 +101,7 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
     if (wrongPrinter) { toast(`התבנית הזו ל ${tpl.printer}, והמחוברת היא ${printer}. החלף מדפסת.`, true); return }
     setBusy(`מדפיס 0 מתוך ${chosen.length}`)
     try {
-      await printLabels(chosen.map(d => d.canvas), density, tpl.printer === 'D110' ? paper === 'clear' : tpl.paper === 'transparent', i => setBusy(`מדפיס ${i} מתוך ${chosen.length}`))
+      await printLabels(chosen.map(d => (tpl.turn ? turnCanvas(d.canvas) : d.canvas)), density, tpl.printer === 'D110' ? paper === 'clear' : tpl.paper === 'transparent', i => setBusy(`מדפיס ${i} מתוך ${chosen.length}`))
       toast(`הודפסו ${chosen.length} תוויות`)
     } catch (e) { toast('ההדפסה נעצרה: ' + ((e as Error).message || e), true) } finally { setBusy(null); setPrinter(isConnected() ? printerName() : null) }
   }
@@ -100,10 +124,20 @@ export default function LabelSheet<T>({ title, items, templates, onClose }: { ti
         <p className="muted" style={{ margin: 0 }}>{ready ? `מוכן. לחיצה על תווית מוציאה אותה מההדפסה.` : `מצייר ${done.length} מתוך ${items.length}...`}</p>
         <div className={'labels-grid' + (tpl.mm[1] > tpl.mm[0] ? ' tall' : '') + (tpl.round ? ' round' : '') + (tpl.mm[0] / tpl.mm[1] > 3 ? ' strip' + (paper === 'white' ? ' white' : '') : '')}>
           {done.map(d => (
-            <button type="button" key={d.id} className={'label-prev' + (skip.has(d.id) ? ' off' : '')} onClick={() => setSkip(s => { const n = new Set(s); if (n.has(d.id)) n.delete(d.id); else n.add(d.id); return n })} title={d.title}>
-              <img src={d.url} alt={d.title} style={{ aspectRatio: `${d.canvas.width} / ${d.canvas.height}` }} />
-              {d.source && d.source !== 'ldraw' && <span className="label-src">{d.source === 'photo' ? 'מתמונה' : d.source === 'none' ? 'בלי תמונה' : d.source}</span>}
-            </button>
+            <div key={d.id} className={'label-cell' + (editing === d.id ? ' editing' : '')}>
+              <button type="button" className={'label-prev' + (skip.has(d.id) ? ' off' : '')} onClick={() => setSkip(s => { const n = new Set(s); if (n.has(d.id)) n.delete(d.id); else n.add(d.id); return n })} title={d.title}>
+                <img src={d.url} alt={d.title} style={{ aspectRatio: `${d.canvas.width} / ${d.canvas.height}` }} />
+                {d.source && d.source !== 'ldraw' && <span className="label-src">{d.source === 'photo' ? 'מתמונה' : d.source === 'none' ? 'בלי תמונה' : d.source}</span>}
+              </button>
+              {canEdit && editing !== d.id && <button type="button" className="label-edit" onClick={() => openEdit(d.id)} aria-label={'טקסט ל ' + d.title}>✎ טקסט</button>}
+              {canEdit && editing === d.id && (
+                <div className="label-form">
+                  <div className="field"><label>כותרת</label><input autoFocus value={form.title} maxLength={60} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="חלקי Technic" /></div>
+                  <div className="field"><label>טקסט, עד 3 שורות (Enter לשורה חדשה)</label><textarea rows={3} value={form.text} onChange={e => setForm({ ...form, text: e.target.value.split('\n').slice(0, 3).join('\n') })} placeholder={'צירים, גלגלי שיניים\nTechnic pins & axles'} /></div>
+                  <div className="label-form-acts"><button type="button" className="btn primary" disabled={!!busy} onClick={saveEdit}>שמור ל {d.title}</button><button type="button" className="btn" onClick={cancelEdit}>ביטול</button></div>
+                </div>
+              )}
+            </div>
           ))}
           {!ready && <div className="label-prev wait"><span /></div>}
         </div>

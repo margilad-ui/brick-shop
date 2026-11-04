@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { deleteLocation, deleteZone, importParts, InventoryRow, keyUsage, Location, LOC_KINDS, parsePartsCsv, PartRow, saveLocation, saveZone, Status, STATUS, syncYear, Zone, ZONE_COLORS } from '../lib/api'
+import { deleteLocation, deleteZone, importParts, InventoryRow, keyUsage, Location, LOC_KINDS, parsePartsCsv, PartRow, saveLocation, saveLocationText, saveZone, Status, STATUS, syncYear, Zone, ZONE_COLORS } from '../lib/api'
 import { Loc, toast } from '../components/Bits'
 import { Labels, LocationLabels, type LocLabel, type PartLabel } from '../labels'
 
@@ -26,7 +26,8 @@ function Places({ rows, locations, zones, reload }: { rows: InventoryRow[]; loca
   const [nz, setNz] = useState({ code: '', name: '', color: 'red', site: '' })
   const [lbl, setLbl] = useState<LocLabel[] | null>(null)
   const [strips, setStrips] = useState(false)
-  const toLbl = (l: Location): LocLabel => ({ code: l.code, label: l.label, kind: l.kind, kindName: LOC_KINDS[l.kind] || '', zoneName: zones.find(z => z.code === l.wall)?.name || null })
+  const toLbl = (l: Location): LocLabel => ({ code: l.code, label: l.label, kind: l.kind, kindName: LOC_KINDS[l.kind] || '', zoneName: zones.find(z => z.code === l.wall)?.name || null, title: l.title || null, text: l.body || null })
+  const saveText = async (code: string, title: string, text: string) => { await saveLocationText(code, title, text); reload() }
   const onLabels = (ls: Location[]) => { setStrips(false); setLbl(ls.filter(l => l.active !== false).map(toLbl)) }
   const onStrips = () => { setStrips(true); setLbl(locations.filter(l => l.active !== false && l.kind === 'shelf').map(toLbl)) }
   const countAt = (code: string) => rows.filter(r => r.location === code && r.status !== 'sold').reduce((s, r) => s + r.qty, 0)
@@ -42,7 +43,7 @@ function Places({ rows, locations, zones, reload }: { rows: InventoryRow[]; loca
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}><div className="eyebrow">מקומות: אזורים ומדפים</div><div style={{ display: 'flex', gap: 6 }}><button type="button" className="btn" onClick={onStrips}>תוויות מדפים</button><button type="button" className="btn" onClick={() => onLabels(locations)}>תוויות מיקום</button></div></div>
       <p className="muted">אזור הוא קיר, ארון, חדר או מחסן. לכל אזור קוד קצר (אות או שתיים) וצבע, ובתוכו מדפים, קופסאות או תאים. קוד המיקום המלא הוא קוד האזור ומספר, למשל B3.</p>
       {zones.map(z => <ZoneCard key={z.code} zone={z} shelves={locations.filter(l => l.wall === z.code)} countAt={countAt} reload={reload} onLabels={onLabels} />)}
-      {lbl && <LocationLabels locs={lbl} strips={strips} onClose={() => setLbl(null)} />}
+      {lbl && <LocationLabels locs={lbl} strips={strips} onClose={() => setLbl(null)} onSaveText={saveText} />}
       <div className="zone" style={{ background: 'var(--bg)' }}>
         <div className="eyebrow">אזור חדש</div>
         <div className="addrow">
@@ -64,6 +65,8 @@ function Swatches({ value, onChange }: { value: string; onChange: (c: string) =>
 function ZoneCard({ zone, shelves, countAt, reload, onLabels }: { zone: Zone; shelves: Location[]; countAt: (c: string) => number; reload: () => void; onLabels: (l: Location[]) => void }) {
   const [z, setZ] = useState(zone)
   const [dirty, setDirty] = useState(false)
+  const [editCode, setEditCode] = useState<string | null>(null)
+  const editing = shelves.find(s => s.code === editCode)
   const [add, setAdd] = useState({ n: String((shelves.length ? Math.max(...shelves.map(s => s.shelf || 0)) : 0) + 1), kind: 'shelf', label: '' })
   useEffect(() => { setZ(zone); setDirty(false) }, [zone])
   const total = shelves.reduce((s, l) => s + countAt(l.code), 0)
@@ -95,8 +98,9 @@ function ZoneCard({ zone, shelves, countAt, reload, onLabels }: { zone: Zone; sh
         {!shelves.length && <button type="button" className="btn danger" onClick={remove}>מחק אזור</button>}
       </div>
       <div className="shelves">
-        {shelves.map(s => <Shelf key={s.code} s={s} count={countAt(s.code)} reload={reload} onLabel={() => onLabels([s])} />)}
+        {shelves.map(s => <Shelf key={s.code} s={s} count={countAt(s.code)} reload={reload} onLabel={() => onLabels([s])} onEdit={s.kind === 'box' ? () => setEditCode(editCode === s.code ? null : s.code) : undefined} />)}
       </div>
+      {editing && <BoxText key={editing.code} s={editing} onDone={() => { setEditCode(null); reload() }} onLabel={() => onLabels([editing])} />}
       <div className="addrow">
         <input className="code" value={add.n} onChange={e => setAdd({ ...add, n: e.target.value.replace(/\D/g, '') })} inputMode="numeric" aria-label="מספר" />
         <select value={add.kind} onChange={e => setAdd({ ...add, kind: e.target.value })} aria-label="סוג">{Object.entries(LOC_KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
@@ -107,7 +111,22 @@ function ZoneCard({ zone, shelves, countAt, reload, onLabels }: { zone: Zone; sh
   )
 }
 
-function Shelf({ s, count, reload, onLabel }: { s: Location; count: number; reload: () => void; onLabel: () => void }) {
+/* a box's label text: title and up to three lines, the same fields the label sheet edits */
+function BoxText({ s, onDone, onLabel }: { s: Location; onDone: () => void; onLabel: () => void }) {
+  const [f, setF] = useState({ title: s.title || '', text: s.body || '' })
+  const [busy, setBusy] = useState(false)
+  async function save() { setBusy(true); try { await saveLocationText(s.code, f.title, f.text); toast(s.code + ' נשמר'); onDone() } catch (e) { toast((e as Error).message, true) } finally { setBusy(false) } }
+  return (
+    <div className="boxtext">
+      <div className="eyebrow"><Loc code={s.code} small /> טקסט לתווית</div>
+      <div className="field"><label>כותרת</label><input value={f.title} maxLength={60} onChange={e => setF({ ...f, title: e.target.value })} placeholder="חלקי Technic" /></div>
+      <div className="field"><label>טקסט, עד 3 שורות</label><textarea rows={3} value={f.text} onChange={e => setF({ ...f, text: e.target.value.split('\n').slice(0, 3).join('\n') })} placeholder={'צירים, גלגלי שיניים\nTechnic pins & axles'} /></div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><button type="button" className="btn primary" disabled={busy} onClick={save}>שמור</button><button type="button" className="btn" onClick={onLabel}>תווית</button><button type="button" className="btn" onClick={onDone}>סגור</button></div>
+    </div>
+  )
+}
+
+function Shelf({ s, count, reload, onLabel, onEdit }: { s: Location; count: number; reload: () => void; onLabel: () => void; onEdit?: () => void }) {
   const [label, setLabel] = useState(s.label || '')
   useEffect(() => setLabel(s.label || ''), [s.label])
   async function save() { if (label === (s.label || '')) return; try { await saveLocation({ ...s, label }); toast(s.code + ' עודכן') } catch (e) { toast((e as Error).message, true) } }
@@ -121,6 +140,7 @@ function Shelf({ s, count, reload, onLabel }: { s: Location; count: number; relo
       <Loc code={s.code} small />
       <input value={label} onChange={e => setLabel(e.target.value)} onBlur={save} aria-label={'תיאור ' + s.code} />
       <b className="num" style={{ fontSize: 11 }}>{count}</b>
+      {onEdit && <button type="button" onClick={onEdit} title="טקסט לתווית" className={s.title ? 'qrb' : ''}>✎</button>}
       {s.active && <button type="button" onClick={onLabel} title="תווית QR" className="qrb">QR</button>}
       <button type="button" onClick={toggle} title={s.active ? 'השבת' : 'הפעל'}>{s.active ? '◌' : '●'}</button>
       {count === 0 && <button type="button" onClick={remove} title="מחק">×</button>}

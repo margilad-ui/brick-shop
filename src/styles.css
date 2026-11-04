@@ -368,3 +368,15 @@ table.inv td.qty{display:table-cell;border:0;border-bottom:1px solid var(--line)
 .labels-grid.strip .label-prev{padding:10px 8px;background:#d6c4a8}
 .labels-grid.strip .label-prev img{mix-blend-mode:multiply}
 .labels-grid.strip.white .label-prev{background:#fff}
+
+/* label sheet: typed text per label (box 80x50) */
+.label-cell{display:grid;gap:6px;align-content:start}
+.label-cell.editing{grid-column:1/-1;background:var(--bg);border-radius:14px;padding:8px}
+.label-cell.editing .label-prev{max-width:520px}
+.label-edit{justify-self:start;border:1px solid var(--line-2);background:var(--paper);border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
+.label-form{display:grid;gap:10px}
+.label-form textarea{resize:vertical;line-height:1.5}
+.label-form-acts{display:flex;gap:8px;flex-wrap:wrap}
+.boxtext{display:grid;gap:10px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;padding:12px;margin-top:8px}
+.boxtext .eyebrow{display:flex;align-items:center;gap:8px}
+.locbar small.locbody{color:var(--ink-2)}
